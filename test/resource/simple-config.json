@@ -1,0 +1,7 @@
+{
+  "httpServer":{
+    "listenPort": 9090,
+    "contentType": "application/json",
+    "encoding": "utf-8"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "facilities":{
+    "httpServer":{
+      "listenPort": 8080,
+      "contentType": "application/json",
+      "encoding": "utf-8"
+    }
+  }
+}
