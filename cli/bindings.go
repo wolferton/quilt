@@ -43,7 +43,7 @@ func (cbc *CreateBindingsCommand) ShortDescription() string{
 func BuildCreateBindingsCommand() Command {
 
     command := new(CreateBindingsCommand)
-    command.name = "CREATE-BINDINGS"
+    command.name = "bind"
     command.shortDescription = "Generate Go source files to add custom components to the Quilt IOC container."
 
     return command
