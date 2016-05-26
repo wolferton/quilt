@@ -57,7 +57,7 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
     protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, &configAccessor, frameworkLoggingManager)
 
-    container := ioc.CreateContainer(protoComponents, frameworkLoggingManager)
+    container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, &configAccessor)
 
     i.logger.LogInfo("Starting components")
     container.StartComponents()

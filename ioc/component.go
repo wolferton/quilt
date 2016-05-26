@@ -3,6 +3,7 @@ package ioc
 type ProtoComponent struct {
     Component *Component
     Dependencies map[string]string
+    ConfigPromises map[string]string
 }
 
 func (pc *ProtoComponent) AddDependency(fieldName, componentName string) {
@@ -13,6 +14,16 @@ func (pc *ProtoComponent) AddDependency(fieldName, componentName string) {
 
     pc.Dependencies[fieldName] = componentName
 }
+
+func (pc *ProtoComponent) AddConfigPromise(fieldName, configPath string) {
+
+	if(pc.ConfigPromises == nil) {
+		pc.ConfigPromises = make(map[string]string)
+	}
+
+	pc.ConfigPromises[fieldName] = configPath
+}
+
 
 func CreateProtoComponent(componentInstance interface{}, componentName string) *ProtoComponent {
 

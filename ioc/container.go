@@ -1,163 +1,170 @@
 package ioc
+
 import (
-    "reflect"
-    "github.com/wolferton/quilt/facility/logger"
+	"reflect"
+	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/config"
 )
 
 const containerDecoratorComponentName = "quiltContainerDecorator"
 const containerComponentName = "quiltContainer"
 
 type ComponentContainer struct {
-    allComponents map[string]*Component
-    componentsByType map[string][]interface{}
-    logger logger.Logger
+	allComponents    map[string]*Component
+	componentsByType map[string][]interface{}
+	logger           logger.Logger
 }
 
 func (cc *ComponentContainer) FindByType(typeName string) []interface{} {
-    return cc.componentsByType[typeName]
+	return cc.componentsByType[typeName]
 }
 
 func (cc *ComponentContainer) StartComponents() {
-    for _, component := range cc.allComponents {
+	for _, component := range cc.allComponents {
 
-        startable, isStartable := component.Instance.(Startable)
+		startable, isStartable := component.Instance.(Startable)
 
-        if(isStartable) {
-            startable.StartComponent()
-        }
+		if (isStartable) {
+			startable.StartComponent()
+		}
 
-    }
+	}
 }
 
-func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent) {
+func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, configAccessor *config.ConfigAccessor) {
 
-    decorators := make([]ComponentDecorator,1)
+	decorators := make([]ComponentDecorator, 1)
 
-    containerDecorator := new(ContainerDecorator)
-    containerDecorator.container = cc
+	containerDecorator := new(ContainerDecorator)
+	containerDecorator.container = cc
 
-    decorators[0] = containerDecorator
+	decorators[0] = containerDecorator
 
-    cc.allComponents = make(map[string]*Component)
-    cc.componentsByType = make(map[string][]interface{})
+	cc.allComponents = make(map[string]*Component)
+	cc.componentsByType = make(map[string][]interface{})
 
-    for index, protoComponent := range protoComponents {
+	for index, protoComponent := range protoComponents {
 
-        component := protoComponent.Component
+		component := protoComponent.Component
 
-        cc.addComponent(component, index)
-        decorators = cc.captureDecorator(component, decorators)
+		cc.addComponent(component, index)
+		decorators = cc.captureDecorator(component, decorators)
 
-    }
+	}
 
-    cc.resolveDependencies(protoComponents)
-    cc.decorateComponents(decorators)
+	cc.resolveDependenciesAndConfig(protoComponents, configAccessor)
+	cc.decorateComponents(decorators)
 }
 
-func (cc *ComponentContainer) resolveDependencies(protoComponents []*ProtoComponent) {
+func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*ProtoComponent, configAccessor *config.ConfigAccessor) {
 
-    for _, proto := range protoComponents {
+	for _, proto := range protoComponents {
 
-        for fieldName, depName := range proto.Dependencies {
+		for fieldName, depName := range proto.Dependencies {
 
-            cc.logger.LogDebug(fieldName + " needs " + depName)
+			cc.logger.LogDebug(fieldName + " needs " + depName)
 
-            requiredComponent := cc.allComponents[depName]
-            requiredInstance := requiredComponent.Instance
+			requiredComponent := cc.allComponents[depName]
+			requiredInstance := requiredComponent.Instance
 
-            targetReflect := reflect.ValueOf(proto.Component.Instance).Elem()
-            targetReflect.FieldByName(fieldName).Set(reflect.ValueOf(requiredInstance))
-        }
+			targetReflect := reflect.ValueOf(proto.Component.Instance).Elem()
+			targetReflect.FieldByName(fieldName).Set(reflect.ValueOf(requiredInstance))
+		}
 
-    }
+		for fieldName, configPath := range proto.ConfigPromises {
+			cc.logger.LogDebug(fieldName + " needs " + configPath)
+
+			configValue := configAccessor.StringVal(configPath)
+			cc.logger.LogDebug("Setting " + fieldName + " to " + configValue)
+
+			targetReflect := reflect.ValueOf(proto.Component.Instance).Elem()
+			targetReflect.FieldByName(fieldName).SetString(configValue)
+		}
+
+	}
+}
+
+func (cc *ComponentContainer) decorateComponents(decorators []ComponentDecorator) {
+
+	for _, component := range cc.allComponents {
+		for _, decorator := range decorators {
+
+			if (decorator.OfInterest(component)) {
+				decorator.DecorateComponent(component, cc)
+			}
+		}
+	}
 
 }
 
-func (cc *ComponentContainer) decorateComponents(decorators []ComponentDecorator){
+func (cc *ComponentContainer) captureDecorator(component *Component, decorators []ComponentDecorator) []ComponentDecorator {
 
-    for _, component := range cc.allComponents {
-        for _, decorator := range decorators {
+	decorator, isDecorator := component.Instance.(ComponentDecorator)
 
-            if(decorator.OfInterest(component)){
-                decorator.DecorateComponent(component, cc)
-            }
-        }
-    }
-
-}
-
-
-
-func (cc *ComponentContainer) captureDecorator(component *Component, decorators []ComponentDecorator) []ComponentDecorator{
-
-    decorator, isDecorator := component.Instance.(ComponentDecorator)
-
-    if(isDecorator) {
-        cc.logger.LogTrace("Found decorator " + component.Name)
-        return append(decorators, decorator)
-    } else {
-        return decorators
-    }
+	if (isDecorator) {
+		cc.logger.LogTrace("Found decorator " + component.Name)
+		return append(decorators, decorator)
+	} else {
+		return decorators
+	}
 }
 
 func (cc *ComponentContainer) addComponent(component *Component, index int) {
-    cc.allComponents[component.Name] = component
-    cc.mapComponentToType(component)
+	cc.allComponents[component.Name] = component
+	cc.mapComponentToType(component)
 }
 
 func (cc *ComponentContainer) mapComponentToType(component *Component) {
-    componentType := reflect.TypeOf(component.Instance)
-    typeName := componentType.String()
+	componentType := reflect.TypeOf(component.Instance)
+	typeName := componentType.String()
 
-    cc.logger.LogDebug("Storing component" + component.Name + " of type " + componentType.String())
+	cc.logger.LogDebug("Storing component" + component.Name + " of type " + componentType.String())
 
-    componentsOfSameType := cc.componentsByType[typeName]
+	componentsOfSameType := cc.componentsByType[typeName]
 
-    if(componentsOfSameType == nil) {
-        componentsOfSameType = make([]interface{},1)
-        componentsOfSameType[0] = component.Instance
-        cc.componentsByType[typeName] = componentsOfSameType
-    } else {
-        cc.componentsByType[typeName] = append(componentsOfSameType,component.Instance)
-    }
+	if (componentsOfSameType == nil) {
+		componentsOfSameType = make([]interface{}, 1)
+		componentsOfSameType[0] = component.Instance
+		cc.componentsByType[typeName] = componentsOfSameType
+	} else {
+		cc.componentsByType[typeName] = append(componentsOfSameType, component.Instance)
+	}
 
 }
 
+func CreateContainer(protoComponents []*ProtoComponent, loggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor) *ComponentContainer {
 
-func CreateContainer(protoComponents []*ProtoComponent, loggingManager *logger.ComponentLoggerManager) *ComponentContainer {
+	container := new(ComponentContainer)
+	container.logger = loggingManager.CreateLogger(containerComponentName)
 
-    container := new(ComponentContainer)
-    container.logger = loggingManager.CreateLogger(containerComponentName)
+	container.Populate(protoComponents, configAccessor)
 
-    container.Populate(protoComponents)
-
-    return container
+	return container
 
 }
 
 type ContainerAccessor interface {
-    Container(container *ComponentContainer)
+	Container(container *ComponentContainer)
 }
 
-
 type ContainerDecorator struct {
-    container *ComponentContainer
+	container *ComponentContainer
 }
 
 func (cd *ContainerDecorator) OfInterest(component *Component) bool {
-    result := false
+	result := false
 
-    switch component.Instance.(type) {
-        case ContainerAccessor:
-        result = true
-    }
+	switch component.Instance.(type) {
+	case ContainerAccessor:
+		result = true
+	}
 
-    return result
+	return result
 }
 
 func (cd *ContainerDecorator) DecorateComponent(component *Component, container *ComponentContainer) {
 
-    accessor := component.Instance.(ContainerAccessor)
-    accessor.Container(container)
+	accessor := component.Instance.(ContainerAccessor)
+	accessor.Container(container)
 
 }
