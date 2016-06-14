@@ -1,0 +1,8 @@
+{
+  "facilities":{
+    "queryManager":{
+      "enabled": true,
+      "TemplateLocation": "queries"
+    }
+  }
+}

@@ -12,6 +12,7 @@ import (
 
 const initiatorComponentName string = "quiltFrameworkInitiator"
 const jsonMergerComponentName string = "quiltJsonMerger"
+const configInjectorComponentName string = "quiltConfigInjector"
 
 type Initiator struct {
     logger logger.Logger
@@ -58,12 +59,15 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
     configAccessor := config.ConfigAccessor{mergedJson}
 
+	injectorLogger := frameworkLoggingManager.CreateLogger(configInjectorComponentName)
+	configInjector := config.ConfigInjector{injectorLogger, &configAccessor}
+
 	facilitiesInitialisor.UpdateFrameworkLogLevel(frameworkLoggingManager, &configAccessor)
 
 	protoComponents = facilitiesInitialisor.InitialiseApplicationLogger(protoComponents, &configAccessor, frameworkLoggingManager)
     protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, &configAccessor, frameworkLoggingManager)
 
-    container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, &configAccessor)
+    container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, &configAccessor, &configInjector)
 
     i.logger.LogInfo("Starting components")
     container.StartComponents()

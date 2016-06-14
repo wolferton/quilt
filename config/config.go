@@ -1,6 +1,8 @@
 package config
 import (
     "strings"
+	"reflect"
+	"github.com/wolferton/quilt/facility/logger"
 )
 
 const JsonPathSeparator string = "."
@@ -20,6 +22,11 @@ type ConfigAccessor struct{
     JsonData map[string]interface{}
 }
 
+func (c *ConfigAccessor) PathExists(path string) (bool, interface{}) {
+	value := c.Value(path)
+
+	return value != nil, value
+}
 
 func (c *ConfigAccessor) Value(path string) ConfigValue {
 
@@ -81,6 +88,10 @@ func (c *ConfigAccessor) configValue(path []string, jsonMap map[string]interface
     var result interface{}
     result = jsonMap[path[0]]
 
+	if result == nil {
+		return nil
+	}
+
     if len(path) == 1 {
         return result
     } else {
@@ -89,13 +100,39 @@ func (c *ConfigAccessor) configValue(path []string, jsonMap map[string]interface
     }
 }
 
-
-
-
-func check(e error) {
-    if e != nil {
-        panic(e)
-    }
+type ConfigInjector struct {
+	FrameworkLogger logger.Logger
+	ConfigAccessor *ConfigAccessor
 }
 
+
+func (ci *ConfigInjector ) PopulateFieldFromJsonPath(fieldName string, path string, target interface{}) {
+
+	targetReflect := reflect.ValueOf(target).Elem()
+	targetField := targetReflect.FieldByName(fieldName)
+
+	switch targetField.Type().Kind() {
+		case reflect.String:
+			configValue := ci.ConfigAccessor.StringVal(path)
+			targetField.SetString(configValue)
+		default:
+			ci.FrameworkLogger.LogError("Unable to use value at path " + path + " as target field " + fieldName + " is not a suppported type")
+	}
+
+}
+
+func (ci *ConfigInjector) PopulateObjectFromJsonPath(path string,  target interface{}) {
+
+	exists, _ := ci.ConfigAccessor.PathExists(path)
+
+	if(exists) {
+
+
+
+
+	} else {
+		ci.FrameworkLogger.LogError("Trying to populate an object from a JSON object, but the base path " + path + " does not exist")
+	}
+
+}
 
