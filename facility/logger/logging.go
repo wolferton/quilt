@@ -20,9 +20,6 @@ type FrameworkLogSource interface {
     SetFrameworkLogger(logger Logger)
 }
 
-type ApplicationLogSource interface {
-    SetApplicationLogger(logger Logger)
-}
 
 type Logger interface {
     LogTrace(message string)
