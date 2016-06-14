@@ -17,13 +17,13 @@ type FacilitiesInitialisor struct{
 }
 
 
-func (fi *FacilitiesInitialisor) InitialiseLogging(protoComponents []*ioc.ProtoComponent) ([]*ioc.ProtoComponent, *logger.ComponentLoggerManager) {
+func (fi *FacilitiesInitialisor) InitialiseLogging(protoComponents []*ioc.ProtoComponent, bootStrapLogLevel int) ([]*ioc.ProtoComponent, *logger.ComponentLoggerManager) {
 
-    applicationLoggingManager := logger.CreateComponentLoggerManager(20)
+    applicationLoggingManager := logger.CreateComponentLoggerManager(bootStrapLogLevel)
     applicationLoggingMangagerProto := ioc.CreateProtoComponent(applicationLoggingManager, applicationLoggingManagerComponentName)
     protoComponents = append(protoComponents, applicationLoggingMangagerProto)
 
-    frameworkLoggingManager := logger.CreateComponentLoggerManager(logger.Trace)
+    frameworkLoggingManager := logger.CreateComponentLoggerManager(bootStrapLogLevel)
     frameworkLoggingManagerProto := ioc.CreateProtoComponent(frameworkLoggingManager, frameworkLoggingManagerComponentName)
     protoComponents = append(protoComponents, frameworkLoggingManagerProto)
 

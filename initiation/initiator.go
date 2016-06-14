@@ -28,9 +28,12 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
     var params map[string]string
     params = i.parseArgs()
 
+	bootstrapLogLevel := logger.LogLevelFromLabel(params["logLevel"])
+
     facilitiesInitialisor := new(FacilitiesInitialisor)
 
-    protoComponents, frameworkLoggingManager := facilitiesInitialisor.InitialiseLogging(protoComponents)
+
+    protoComponents, frameworkLoggingManager := facilitiesInitialisor.InitialiseLogging(protoComponents, bootstrapLogLevel)
     i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
 
     i.logger.LogInfo("Creating framework components")
@@ -41,10 +44,10 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
     configFiles := i.builtInConfigPaths()
     configFiles = append(configFiles, i.splitConfigPaths(configPath)...)
 
-    i.logger.LogDebug("Loading configuration from: ")
+    i.logger.LogInfo("Loading configuration from: ")
 
     for _, fileName := range configFiles {
-        i.logger.LogDebug(fileName)
+        i.logger.LogInfo(fileName)
     }
 
 
@@ -67,7 +70,7 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
 func (i *Initiator) parseArgs() (map[string]string) {
     configFilePtr := flag.String("c", "config.json", "Path to container configuration file")
-
+    startupLogLevel := flag.String("l", "INFO", "Logging threshold for messages from components during bootstrap")
     flag.Parse()
 
 
@@ -75,6 +78,7 @@ func (i *Initiator) parseArgs() (map[string]string) {
     params = make(map[string]string)
 
     params["config"] = *configFilePtr
+    params["logLevel"] = *startupLogLevel
 
     return params
 
