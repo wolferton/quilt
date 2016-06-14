@@ -3,6 +3,7 @@ package logger
 import (
     "strings"
     "fmt"
+	"time"
 )
 
 const (
@@ -77,7 +78,9 @@ func (lal *LevelAwareLogger) IsLevelEnabled(level int) bool{
 func (lal *LevelAwareLogger) log(prefix string, level int, message string) {
 
     if(level >= lal.localLogThreshhold || level >= lal.globalLogThreshold){
-        fmt.Printf("%s %s %s\n", prefix, lal.loggerName, message)
+
+		t := time.Now()
+        fmt.Printf("%s %s %s %s\n", t.Format(time.RFC3339), prefix, lal.loggerName, message)
     }
 
 }
