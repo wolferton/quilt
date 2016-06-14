@@ -33,46 +33,48 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
     facilitiesInitialisor := new(FacilitiesInitialisor)
 
-
     protoComponents, frameworkLoggingManager := facilitiesInitialisor.BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
     i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
 
     i.logger.LogInfo("Creating framework components")
 
-    var configPath = params["config"]
-
-
-    configFiles := i.builtInConfigPaths()
-    configFiles = append(configFiles, i.splitConfigPaths(configPath)...)
-
-    i.logger.LogInfo("Loading configuration from: ")
-
-    for _, fileName := range configFiles {
-        i.logger.LogInfo(fileName)
-    }
-
-
-    jsonMerger := new(jsonmerger.JsonMerger)
-    jsonMerger.Logger = frameworkLoggingManager.CreateLogger(jsonMergerComponentName)
-
-    mergedJson := jsonMerger.LoadAndMergeConfig(configFiles)
-
-    configAccessor := config.ConfigAccessor{mergedJson}
+    configAccessor := i.loadConfigIntoAccessor(params["config"], frameworkLoggingManager)
+	facilitiesInitialisor.ConfigAccessor = configAccessor
 
 	injectorLogger := frameworkLoggingManager.CreateLogger(configInjectorComponentName)
-	configInjector := config.ConfigInjector{injectorLogger, &configAccessor}
+	configInjector := config.ConfigInjector{injectorLogger, configAccessor}
 
-	facilitiesInitialisor.UpdateFrameworkLogLevel(frameworkLoggingManager, &configAccessor)
+	facilitiesInitialisor.ConfigInjector = &configInjector
+	facilitiesInitialisor.UpdateFrameworkLogLevel()
 
-	protoComponents = facilitiesInitialisor.InitialiseApplicationLogger(protoComponents, &configAccessor, frameworkLoggingManager)
-    protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, &configAccessor, frameworkLoggingManager)
+	protoComponents = facilitiesInitialisor.InitialiseApplicationLogger(protoComponents)
+    protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, configAccessor, frameworkLoggingManager)
+	protoComponents = facilitiesInitialisor.InitialiseQueryManager(protoComponents)
 
-    container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, &configAccessor, &configInjector)
+    container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
 
     i.logger.LogInfo("Starting components")
     container.StartComponents()
     i.logger.LogInfo("Ready")
 
+}
+
+func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingManager *logger.ComponentLoggerManager) *config.ConfigAccessor {
+	configFiles := i.builtInConfigPaths()
+	configFiles = append(configFiles, i.splitConfigPaths(configPath)...)
+
+	i.logger.LogInfo("Loading configuration from: ")
+
+	for _, fileName := range configFiles {
+		i.logger.LogInfo(fileName)
+	}
+
+	jsonMerger := new(jsonmerger.JsonMerger)
+	jsonMerger.Logger = frameworkLoggingManager.CreateLogger(jsonMergerComponentName)
+
+	mergedJson := jsonMerger.LoadAndMergeConfig(configFiles)
+
+	return &config.ConfigAccessor{mergedJson}
 }
 
 func (i *Initiator) parseArgs() (map[string]string) {

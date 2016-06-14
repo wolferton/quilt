@@ -22,10 +22,10 @@ type ConfigAccessor struct{
     JsonData map[string]interface{}
 }
 
-func (c *ConfigAccessor) PathExists(path string) (bool, interface{}) {
+func (c *ConfigAccessor) PathExists(path string) (bool) {
 	value := c.Value(path)
 
-	return value != nil, value
+	return value != nil
 }
 
 func (c *ConfigAccessor) Value(path string) ConfigValue {
@@ -122,13 +122,25 @@ func (ci *ConfigInjector ) PopulateFieldFromJsonPath(fieldName string, path stri
 }
 
 func (ci *ConfigInjector) PopulateObjectFromJsonPath(path string,  target interface{}) {
+	ca := ci.ConfigAccessor
+	exists := ca.PathExists(path)
 
-	exists, _ := ci.ConfigAccessor.PathExists(path)
+	if exists  {
+		targetReflect := reflect.ValueOf(target).Elem()
+		targetType := targetReflect.Type()
+		numFields := targetType.NumField()
 
-	if(exists) {
+		for i := 0; i < numFields; i++ {
 
+			fieldName := targetType.Field(i).Name
 
+			expectedConfigPath := path + JsonPathSeparator + fieldName
 
+			if ca.PathExists( expectedConfigPath ) {
+				ci.PopulateFieldFromJsonPath(fieldName, expectedConfigPath, target)
+			}
+
+		}
 
 	} else {
 		ci.FrameworkLogger.LogError("Trying to populate an object from a JSON object, but the base path " + path + " does not exist")
