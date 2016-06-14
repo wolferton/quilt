@@ -30,7 +30,7 @@ func (fi *FacilitiesInitialisor) InitialiseLogging(protoComponents []*ioc.ProtoC
     applicationLoggingDecorator := new(decorator.ApplicationLogDecorator)
     applicationLoggingDecorator.LoggerManager = applicationLoggingManager
 
-    applicationLoggingDecorator.FrameworkLogger = frameworkLoggingManager.CreateLoggerAtLevel("ApplicationLogDecorator",logger.Trace)
+    applicationLoggingDecorator.FrameworkLogger = frameworkLoggingManager.CreateLogger("ApplicationLogDecorator")
 
     applicationLoggingDecoratorProto := ioc.CreateProtoComponent(applicationLoggingDecorator, applicationLoggingDecoratorName)
 
