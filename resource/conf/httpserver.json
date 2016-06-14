@@ -1,6 +1,7 @@
 {
   "facilities":{
     "httpServer":{
+      "enabled": true,
       "listenPort": 8080,
       "contentType": "application/json",
       "encoding": "utf-8"

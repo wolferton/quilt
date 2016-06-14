@@ -60,6 +60,10 @@ func (c *ConfigAccessor) Array(path string) []interface{} {
     return c.Value(path).([]interface{})
 }
 
+func  (c *ConfigAccessor) BoolValue(path string) bool {
+	return c.Value(path).(bool)
+}
+
 func JsonType(value interface{}) int{
 
     switch value.(type) {

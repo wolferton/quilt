@@ -60,6 +60,10 @@ func (fi *FacilitiesInitialisor) InitialiseApplicationLogger(protoComponents []*
 
 func (fi *FacilitiesInitialisor) InitialiseHttpServer(protoComponents []*ioc.ProtoComponent, configAccessor *config.ConfigAccessor, frameworkLoggingManager *logger.ComponentLoggerManager) []*ioc.ProtoComponent {
 
+	if ! configAccessor.BoolValue("facilities.httpServer.enabled") {
+		return protoComponents
+	}
+
     httpServerConfig := httpserver.ParseDefaultHttpServerConfig(configAccessor)
 
     httpServer := new(httpserver.QuiltHttpServer)
