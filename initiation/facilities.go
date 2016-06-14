@@ -16,16 +16,32 @@ type FacilitiesInitialisor struct{
 
 }
 
+func (fi *FacilitiesInitialisor) BootstrapFrameworkLogging(protoComponents []*ioc.ProtoComponent, bootStrapLogLevel int) ([]*ioc.ProtoComponent, *logger.ComponentLoggerManager) {
 
-func (fi *FacilitiesInitialisor) InitialiseLogging(protoComponents []*ioc.ProtoComponent, bootStrapLogLevel int) ([]*ioc.ProtoComponent, *logger.ComponentLoggerManager) {
-
-    applicationLoggingManager := logger.CreateComponentLoggerManager(bootStrapLogLevel)
-    applicationLoggingMangagerProto := ioc.CreateProtoComponent(applicationLoggingManager, applicationLoggingManagerComponentName)
-    protoComponents = append(protoComponents, applicationLoggingMangagerProto)
 
     frameworkLoggingManager := logger.CreateComponentLoggerManager(bootStrapLogLevel)
     frameworkLoggingManagerProto := ioc.CreateProtoComponent(frameworkLoggingManager, frameworkLoggingManagerComponentName)
-    protoComponents = append(protoComponents, frameworkLoggingManagerProto)
+    return append(protoComponents, frameworkLoggingManagerProto), frameworkLoggingManager
+
+}
+
+func (fi *FacilitiesInitialisor) UpdateFrameworkLogLevel(frameworkLoggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor) {
+    defaultLogLevelLabel := configAccessor.StringVal("facilities.frameworkLogger.defaultLogLevel")
+    defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
+
+	frameworkLoggingManager.UpdateGlobalThreshold(defaultLogLevel)
+	frameworkLoggingManager.UpdateLocalThreshold(defaultLogLevel)
+}
+
+func (fi *FacilitiesInitialisor) InitialiseApplicationLogger(protoComponents []*ioc.ProtoComponent, configAccessor *config.ConfigAccessor, frameworkLoggingManager *logger.ComponentLoggerManager) []*ioc.ProtoComponent {
+
+    defaultLogLevelLabel := configAccessor.StringVal("facilities.applicationLogger.defaultLogLevel")
+    defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
+
+
+    applicationLoggingManager := logger.CreateComponentLoggerManager(defaultLogLevel)
+    applicationLoggingMangagerProto := ioc.CreateProtoComponent(applicationLoggingManager, applicationLoggingManagerComponentName)
+    protoComponents = append(protoComponents, applicationLoggingMangagerProto)
 
     applicationLoggingDecorator := new(decorator.ApplicationLogDecorator)
     applicationLoggingDecorator.LoggerManager = applicationLoggingManager
@@ -34,10 +50,9 @@ func (fi *FacilitiesInitialisor) InitialiseLogging(protoComponents []*ioc.ProtoC
 
     applicationLoggingDecoratorProto := ioc.CreateProtoComponent(applicationLoggingDecorator, applicationLoggingDecoratorName)
 
-    return append(protoComponents, applicationLoggingDecoratorProto), frameworkLoggingManager
-
-
+    return append(protoComponents, applicationLoggingDecoratorProto)
 }
+
 
 func (fi *FacilitiesInitialisor) InitialiseHttpServer(protoComponents []*ioc.ProtoComponent, configAccessor *config.ConfigAccessor, frameworkLoggingManager *logger.ComponentLoggerManager) []*ioc.ProtoComponent {
 

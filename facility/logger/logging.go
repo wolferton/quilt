@@ -142,6 +142,22 @@ func CreateComponentLoggerManager(globalThreshold int) *ComponentLoggerManager{
     return manager
 }
 
+func (clm *ComponentLoggerManager) UpdateGlobalThreshold(globalThreshold int) {
+    clm.globalThreshold = globalThreshold
+
+    for _, v := range clm.componentsLogger {
+        v.SetGlobalThreshold(globalThreshold)
+    }
+}
+
+func (clm *ComponentLoggerManager) UpdateLocalThreshold(threshold int) {
+	clm.globalThreshold = threshold
+
+	for _, v := range clm.componentsLogger {
+		v.SetLocalThreshold(threshold)
+	}
+}
+
 func (clm *ComponentLoggerManager) CreateLogger(componentId string) Logger{
     return clm.CreateLoggerAtLevel(componentId, clm.globalThreshold)
 }

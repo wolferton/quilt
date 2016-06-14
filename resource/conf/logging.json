@@ -1,0 +1,10 @@
+{
+  "facilities":{
+    "frameworkLogger":{
+      "defaultLogLevel": "INFO"
+    },
+    "applicationLogger":{
+      "defaultLogLevel": "INFO"
+    }
+  }
+}

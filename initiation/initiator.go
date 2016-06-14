@@ -33,7 +33,7 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
     facilitiesInitialisor := new(FacilitiesInitialisor)
 
 
-    protoComponents, frameworkLoggingManager := facilitiesInitialisor.InitialiseLogging(protoComponents, bootstrapLogLevel)
+    protoComponents, frameworkLoggingManager := facilitiesInitialisor.BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
     i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
 
     i.logger.LogInfo("Creating framework components")
@@ -58,6 +58,9 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
     configAccessor := config.ConfigAccessor{mergedJson}
 
+	facilitiesInitialisor.UpdateFrameworkLogLevel(frameworkLoggingManager, &configAccessor)
+
+	protoComponents = facilitiesInitialisor.InitialiseApplicationLogger(protoComponents, &configAccessor, frameworkLoggingManager)
     protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, &configAccessor, frameworkLoggingManager)
 
     container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, &configAccessor)
