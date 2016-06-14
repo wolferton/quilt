@@ -30,7 +30,14 @@ func (c *ConfigAccessor) Value(path string) ConfigValue {
 }
 
 func (c *ConfigAccessor) ObjectVal(path string) map[string]interface{} {
-    return c.Value(path).(map[string]interface{})
+
+    value := c.Value(path)
+
+    if value == nil {
+        return nil
+    } else {
+        return value.(map[string]interface{})
+    }
 }
 
 func (c *ConfigAccessor) StringVal(path string) string {

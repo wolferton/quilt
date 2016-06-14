@@ -19,7 +19,7 @@ type FacilitiesInitialisor struct{
 func (fi *FacilitiesInitialisor) BootstrapFrameworkLogging(protoComponents []*ioc.ProtoComponent, bootStrapLogLevel int) ([]*ioc.ProtoComponent, *logger.ComponentLoggerManager) {
 
 
-    frameworkLoggingManager := logger.CreateComponentLoggerManager(bootStrapLogLevel)
+    frameworkLoggingManager := logger.CreateComponentLoggerManager(bootStrapLogLevel, nil)
     frameworkLoggingManagerProto := ioc.CreateProtoComponent(frameworkLoggingManager, frameworkLoggingManagerComponentName)
     return append(protoComponents, frameworkLoggingManagerProto), frameworkLoggingManager
 
@@ -38,9 +38,13 @@ func (fi *FacilitiesInitialisor) InitialiseApplicationLogger(protoComponents []*
     defaultLogLevelLabel := configAccessor.StringVal("facilities.applicationLogger.defaultLogLevel")
     defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
 
+	initialLogLevelsByComponent := configAccessor.ObjectVal("facilities.applicationLogger.componentLogLevels")
 
-    applicationLoggingManager := logger.CreateComponentLoggerManager(defaultLogLevel)
-    applicationLoggingMangagerProto := ioc.CreateProtoComponent(applicationLoggingManager, applicationLoggingManagerComponentName)
+
+
+    applicationLoggingManager := logger.CreateComponentLoggerManager(defaultLogLevel, initialLogLevelsByComponent)
+
+	applicationLoggingMangagerProto := ioc.CreateProtoComponent(applicationLoggingManager, applicationLoggingManagerComponentName)
     protoComponents = append(protoComponents, applicationLoggingMangagerProto)
 
     applicationLoggingDecorator := new(decorator.ApplicationLogDecorator)
