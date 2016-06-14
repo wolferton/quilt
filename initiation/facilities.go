@@ -74,7 +74,7 @@ func (fi *FacilitiesInitialisor) InitialiseHttpServer(protoComponents []*ioc.Pro
     httpServer.Config = httpServerConfig
     httpServer.Logger = frameworkLoggingManager.CreateLogger(httpServerComponentName)
 
-    proto := fi.wrapInProto(httpServer, httpServerComponentName)
+    proto := ioc.CreateProtoComponent(httpServer, httpServerComponentName)
 
     return append(protoComponents, proto)
 }
@@ -87,20 +87,9 @@ func (fi *FacilitiesInitialisor) InitialiseQueryManager(protoComponents []*ioc.P
 		queryManager := new(querymanager.QueryManager)
 		fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.queryManager", queryManager)
 
-		proto := fi.wrapInProto(queryManager, queryManagerComponentName)
+		proto := ioc.CreateProtoComponent(queryManager, queryManagerComponentName)
 
 		return append(protoComponents, proto)
 	}
 }
 
-func (fi *FacilitiesInitialisor) wrapInProto(instance interface{}, name string) *ioc.ProtoComponent{
-
-	component := new(ioc.Component)
-	component.Instance = instance
-	component.Name =  name
-
-	proto := new(ioc.ProtoComponent)
-	proto.Component = component
-
-	return proto
-}
