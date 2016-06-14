@@ -32,6 +32,7 @@ type Logger interface {
     LogError(message string)
     LogFatal(message string)
     LogAtLevel(level int, levelLabel string, message string)
+	IsLevelEnabled(level int) bool
 }
 
 type LogThresholdControl interface{
@@ -70,6 +71,10 @@ type LevelAwareLogger struct {
     globalLogThreshold int
     localLogThreshhold int
     loggerName string
+}
+
+func (lal *LevelAwareLogger) IsLevelEnabled(level int) bool{
+	return level >= lal.globalLogThreshold && level >= lal.localLogThreshhold
 }
 
 func (lal *LevelAwareLogger) log(prefix string, level int, message string) {
@@ -141,9 +146,13 @@ func CreateComponentLoggerManager(globalThreshold int) *ComponentLoggerManager{
 }
 
 func (clm *ComponentLoggerManager) CreateLogger(componentId string) Logger{
+    return clm.CreateLoggerAtLevel(componentId, clm.globalThreshold)
+}
+
+func (clm *ComponentLoggerManager) CreateLoggerAtLevel(componentId string, threshold int) Logger{
     logger := new(LevelAwareLogger)
     logger.globalLogThreshold = clm.globalThreshold
-    logger.localLogThreshhold = clm.globalThreshold
+    logger.localLogThreshhold = threshold
     logger.loggerName = componentId
 
     clm.componentsLogger[componentId] = logger

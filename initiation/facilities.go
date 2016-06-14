@@ -19,17 +19,18 @@ type FacilitiesInitialisor struct{
 
 func (fi *FacilitiesInitialisor) InitialiseLogging(protoComponents []*ioc.ProtoComponent) ([]*ioc.ProtoComponent, *logger.ComponentLoggerManager) {
 
-
     applicationLoggingManager := logger.CreateComponentLoggerManager(20)
     applicationLoggingMangagerProto := ioc.CreateProtoComponent(applicationLoggingManager, applicationLoggingManagerComponentName)
     protoComponents = append(protoComponents, applicationLoggingMangagerProto)
 
-    frameworkLoggingManager := logger.CreateComponentLoggerManager(20)
+    frameworkLoggingManager := logger.CreateComponentLoggerManager(logger.Trace)
     frameworkLoggingManagerProto := ioc.CreateProtoComponent(frameworkLoggingManager, frameworkLoggingManagerComponentName)
     protoComponents = append(protoComponents, frameworkLoggingManagerProto)
 
     applicationLoggingDecorator := new(decorator.ApplicationLogDecorator)
     applicationLoggingDecorator.LoggerManager = applicationLoggingManager
+
+    applicationLoggingDecorator.FrameworkLogger = frameworkLoggingManager.CreateLoggerAtLevel("ApplicationLogDecorator",logger.Trace)
 
     applicationLoggingDecoratorProto := ioc.CreateProtoComponent(applicationLoggingDecorator, applicationLoggingDecoratorName)
 
