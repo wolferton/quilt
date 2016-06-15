@@ -83,20 +83,15 @@ func FileListFromPath(path string) ([]string, error) {
             return files, err
         }
 
-        files := make([]string, 0)
-
         for _, info := range contents{
 
             fileName := info.Name()
-
-            if info.Mode().IsDir() {
-                files = append(files, path + "/" + fileName)
-            }
-        }
+			files = append(files, path + "/" + fileName)
+		}
 
     } else {
         files = append(files, file.Name())
     }
 
-    return files, nil
+	return files, nil
 }

@@ -72,11 +72,16 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 
 	configFiles = append(configFiles, expandedPaths...)
 
-	i.logger.LogDebug("Loading configuration from: ")
+	if i.logger.IsLevelEnabled(logger.Debug) {
 
-	for _, fileName := range configFiles {
-		i.logger.LogDebug(fileName)
+		i.logger.LogDebug("Loading configuration from: ")
+
+		for _, fileName := range configFiles {
+			i.logger.LogDebug(fileName)
+		}
 	}
+
+
 
 	jsonMerger := new(jsonmerger.JsonMerger)
 	jsonMerger.Logger = frameworkLoggingManager.CreateLogger(jsonMergerComponentName)

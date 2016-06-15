@@ -57,7 +57,7 @@ func (jm *JsonMerger) merge(base, additional map[string]interface{}) map[string]
                 base[key] = value
             }
         } else {
-            jm.Logger.LogDebug("Adding "  + key)
+            jm.Logger.LogTrace("Adding "  + key)
 
             base[key] = value
         }

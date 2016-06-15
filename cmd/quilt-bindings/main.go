@@ -10,11 +10,12 @@ import (
 	"strconv"
 	"strings"
 	"github.com/wolferton/quilt/facility/jsonmerger"
+	"fmt"
 )
 
 const (
 	cdfLocationFlagName string = "c"
-	cdfLocationDefault string = "conf/components.json"
+	cdfLocationDefault string = "resource/components"
 	cdfLocationHelp string = "A comma separated list of config files or directories containing component definition files"
 
 	ofLocationFlagName string = "o"
@@ -44,12 +45,24 @@ func main() {
 	flag.Parse()
 
 	command := new(CreateBindingsCommand)
-	command.ComponentDefinitions = []string{*cdf}
+
+	expandedFileList, err := config.ExpandToFiles(splitConfigPaths((*cdf)))
+
+	if err != nil {
+		fmt.Println("Unable to expand " + *cdf + " to a list of config files: " + err.Error())
+		os.Exit(-1)
+	}
+
+	command.ComponentDefinitions = expandedFileList
 	command.OutputFile = *of
 	command.LogLevel = *ll
 
 	command.Execute()
 
+}
+
+func splitConfigPaths(pathArgument string) []string {
+	return strings.Split(pathArgument, ",")
 }
 
 
