@@ -99,7 +99,7 @@ func (i *Initiator) splitConfigPaths(pathArgument string) []string {
 
 func (i *Initiator) builtInConfigPaths() []string {
 
-    const builtInConfigPath = "/resource/conf"
+    const builtInConfigPath = "/resource/facility-config"
 
     configFolder := config.QuiltHome() + builtInConfigPath
 
