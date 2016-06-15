@@ -1,9 +1,9 @@
 package ioc
 
 import (
-	"reflect"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/config"
+	"github.com/wolferton/quilt/facility/logger"
+	"reflect"
 )
 
 const containerDecoratorComponentName = "quiltContainerDecorator"
@@ -13,7 +13,7 @@ type ComponentContainer struct {
 	allComponents    map[string]*Component
 	componentsByType map[string][]interface{}
 	logger           logger.Logger
-	configInjector *config.ConfigInjector
+	configInjector   *config.ConfigInjector
 }
 
 func (cc *ComponentContainer) FindByType(typeName string) []interface{} {
@@ -25,7 +25,7 @@ func (cc *ComponentContainer) StartComponents() {
 
 		startable, isStartable := component.Instance.(Startable)
 
-		if (isStartable) {
+		if isStartable {
 			startable.StartComponent()
 		}
 
@@ -87,7 +87,7 @@ func (cc *ComponentContainer) decorateComponents(decorators []ComponentDecorator
 	for _, component := range cc.allComponents {
 		for _, decorator := range decorators {
 
-			if (decorator.OfInterest(component)) {
+			if decorator.OfInterest(component) {
 				decorator.DecorateComponent(component, cc)
 			}
 		}
@@ -99,7 +99,7 @@ func (cc *ComponentContainer) captureDecorator(component *Component, decorators 
 
 	decorator, isDecorator := component.Instance.(ComponentDecorator)
 
-	if (isDecorator) {
+	if isDecorator {
 		cc.logger.LogTrace("Found decorator " + component.Name)
 		return append(decorators, decorator)
 	} else {
@@ -120,7 +120,7 @@ func (cc *ComponentContainer) mapComponentToType(component *Component) {
 
 	componentsOfSameType := cc.componentsByType[typeName]
 
-	if (componentsOfSameType == nil) {
+	if componentsOfSameType == nil {
 		componentsOfSameType = make([]interface{}, 1)
 		componentsOfSameType[0] = component.Instance
 		cc.componentsByType[typeName] = componentsOfSameType

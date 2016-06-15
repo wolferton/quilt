@@ -1,7 +1,8 @@
 package decorator
+
 import (
-    "github.com/wolferton/quilt/ioc"
-    "github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/ioc"
 	"reflect"
 )
 
@@ -20,19 +21,18 @@ func TypeOfField(component *ioc.Component, name string) reflect.Type {
 }
 
 type ApplicationLogDecorator struct {
-
-    LoggerManager *logger.ComponentLoggerManager
+	LoggerManager   *logger.ComponentLoggerManager
 	FrameworkLogger logger.Logger
 }
 
-func (ald *ApplicationLogDecorator) OfInterest(component *ioc.Component) bool{
+func (ald *ApplicationLogDecorator) OfInterest(component *ioc.Component) bool {
 
 	result := HasFieldOfName(component, expectedApplicationLoggerFieldName)
 
-    frameworkLog :=ald.FrameworkLogger
+	frameworkLog := ald.FrameworkLogger
 
-	if (frameworkLog.IsLevelEnabled(logger.Trace) ) {
-		if(result) {
+	if frameworkLog.IsLevelEnabled(logger.Trace) {
+		if result {
 			frameworkLog.LogTrace(component.Name + " NEEDS an ApplicationLogger")
 
 		} else {
@@ -40,16 +40,16 @@ func (ald *ApplicationLogDecorator) OfInterest(component *ioc.Component) bool{
 		}
 	}
 
-    return result
+	return result
 }
 
-func (ald *ApplicationLogDecorator) DecorateComponent(component *ioc.Component, container *ioc.ComponentContainer){
-    logger := ald.LoggerManager.CreateLogger(component.Name)
+func (ald *ApplicationLogDecorator) DecorateComponent(component *ioc.Component, container *ioc.ComponentContainer) {
+	logger := ald.LoggerManager.CreateLogger(component.Name)
 
 	targetFieldType := TypeOfField(component, expectedApplicationLoggerFieldName)
 	typeOfLogger := reflect.TypeOf(logger)
 
-	if(typeOfLogger.AssignableTo(targetFieldType) ) {
+	if typeOfLogger.AssignableTo(targetFieldType) {
 		reflectComponent := reflect.ValueOf(component.Instance).Elem()
 		reflectComponent.FieldByName(expectedApplicationLoggerFieldName).Set(reflect.ValueOf(logger))
 	} else {

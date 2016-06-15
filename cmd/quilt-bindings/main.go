@@ -1,39 +1,39 @@
 package main
 
 import (
+	"bufio"
 	"flag"
+	"fmt"
 	"github.com/wolferton/quilt/config"
+	"github.com/wolferton/quilt/facility/jsonmerger"
 	"github.com/wolferton/quilt/facility/logger"
 	"os"
 	"path"
-	"bufio"
 	"strconv"
 	"strings"
-	"github.com/wolferton/quilt/facility/jsonmerger"
-	"fmt"
 )
 
 const (
 	cdfLocationFlagName string = "c"
-	cdfLocationDefault string = "resource/components"
-	cdfLocationHelp string = "A comma separated list of config files or directories containing component definition files"
+	cdfLocationDefault  string = "resource/components"
+	cdfLocationHelp     string = "A comma separated list of config files or directories containing component definition files"
 
 	ofLocationFlagName string = "o"
-	ofLocationDefault string = "bindings/bindings.go"
-	ofLocationHelp string = "Path of the Go source file that will be generated"
+	ofLocationDefault  string = "bindings/bindings.go"
+	ofLocationHelp     string = "Path of the Go source file that will be generated"
 
 	llFlagName string = "l"
-	llDefault string = "ERROR"
-	llHelp string = "Minimum importance of logging to be displayed (TRACE, DEBUG, INFO, WARN, ERROR, FATAL)"
+	llDefault  string = "ERROR"
+	llHelp     string = "Minimum importance of logging to be displayed (TRACE, DEBUG, INFO, WARN, ERROR, FATAL)"
 
 	nameField = "name"
 	typeField = "type"
 
 	deferSeparator = ":"
-	refPrefix = "ref"
-	refAlias = "r"
-	confPrefix = "conf"
-	confAlias = "c"
+	refPrefix      = "ref"
+	refAlias       = "r"
+	confPrefix     = "conf"
+	confAlias      = "c"
 )
 
 func main() {
@@ -65,14 +65,12 @@ func splitConfigPaths(pathArgument string) []string {
 	return strings.Split(pathArgument, ",")
 }
 
-
 type CreateBindingsCommand struct {
-	logger	logger.Logger
-	OutputFile string
+	logger               logger.Logger
+	OutputFile           string
 	ComponentDefinitions []string
-	LogLevel string
+	LogLevel             string
 }
-
 
 func (cbc *CreateBindingsCommand) Execute() int {
 
@@ -95,7 +93,6 @@ func (cbc *CreateBindingsCommand) configureLogging() {
 
 	logger := new(logger.LevelAwareLogger)
 
-
 	logger.SetThreshold(logLevel)
 	logger.SetLoggerName("")
 	cbc.logger = logger
@@ -108,7 +105,7 @@ func (cbc *CreateBindingsCommand) writeBindingsSource(outPath string, configAcce
 	os.MkdirAll(path.Dir(outPath), 0777)
 	file, err := os.Create(outPath)
 
-	if (err != nil) {
+	if err != nil {
 		cbc.logger.LogFatal(err.(*os.PathError).Error())
 		os.Exit(-1)
 	}
@@ -174,8 +171,6 @@ func (cbc *CreateBindingsCommand) writeStringValue(writer *bufio.Writer, instanc
 		prefix := valueElements[0]
 		instruction := valueElements[1]
 
-
-
 		if prefix == refPrefix || prefix == refAlias {
 
 			writer.WriteString("\t")
@@ -237,7 +232,7 @@ func (cbc *CreateBindingsCommand) writeComponentWrapper(writer *bufio.Writer, co
 	writer.WriteString("pc[")
 	writer.WriteString(strconv.Itoa(index))
 	writer.WriteString("] = ")
-	writer.WriteString(componentProtoName);
+	writer.WriteString(componentProtoName)
 	writer.WriteString("\n\t")
 	writer.WriteString(componentProtoName)
 	writer.WriteString(".Component.Name = \"")
@@ -274,4 +269,3 @@ func (cbc *CreateBindingsCommand) writeImports(writer *bufio.Writer, configAcces
 	writer.WriteString("\t\"github.com/wolferton/quilt/ioc\"")
 	writer.WriteString("\n)\n\n")
 }
-

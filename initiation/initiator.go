@@ -1,13 +1,14 @@
 package initiation
+
 import (
-    "flag"
-    "github.com/wolferton/quilt/config"
-    "github.com/wolferton/quilt/ioc"
-    "github.com/wolferton/quilt/facility/logger"
-    "fmt"
-    "os"
-    "strings"
-    "github.com/wolferton/quilt/facility/jsonmerger"
+	"flag"
+	"fmt"
+	"github.com/wolferton/quilt/config"
+	"github.com/wolferton/quilt/facility/jsonmerger"
+	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/ioc"
+	"os"
+	"strings"
 )
 
 const initiatorComponentName string = "quiltFrameworkInitiator"
@@ -15,30 +16,29 @@ const jsonMergerComponentName string = "quiltJsonMerger"
 const configInjectorComponentName string = "quiltConfigInjector"
 
 type Initiator struct {
-    logger logger.Logger
+	logger logger.Logger
 }
 
 func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
-    if config.QuiltHome() == "" {
-        fmt.Println("QUILT_HOME environment variable not set")
-        os.Exit(-1)
-    }
+	if config.QuiltHome() == "" {
+		fmt.Println("QUILT_HOME environment variable not set")
+		os.Exit(-1)
+	}
 
-
-    var params map[string]string
-    params = i.parseArgs()
+	var params map[string]string
+	params = i.parseArgs()
 
 	bootstrapLogLevel := logger.LogLevelFromLabel(params["logLevel"])
 
-    facilitiesInitialisor := new(FacilitiesInitialisor)
+	facilitiesInitialisor := new(FacilitiesInitialisor)
 
-    protoComponents, frameworkLoggingManager := facilitiesInitialisor.BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
-    i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
+	protoComponents, frameworkLoggingManager := facilitiesInitialisor.BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
+	i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
 
-    i.logger.LogInfo("Creating framework components")
+	i.logger.LogInfo("Creating framework components")
 
-    configAccessor := i.loadConfigIntoAccessor(params["config"], frameworkLoggingManager)
+	configAccessor := i.loadConfigIntoAccessor(params["config"], frameworkLoggingManager)
 	facilitiesInitialisor.ConfigAccessor = configAccessor
 
 	injectorLogger := frameworkLoggingManager.CreateLogger(configInjectorComponentName)
@@ -48,14 +48,14 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 	facilitiesInitialisor.UpdateFrameworkLogLevel()
 
 	protoComponents = facilitiesInitialisor.InitialiseApplicationLogger(protoComponents)
-    protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, configAccessor, frameworkLoggingManager)
+	protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, configAccessor, frameworkLoggingManager)
 	protoComponents = facilitiesInitialisor.InitialiseQueryManager(protoComponents)
 
-    container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
+	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
 
-    i.logger.LogInfo("Starting components")
-    container.StartComponents()
-    i.logger.LogInfo("Ready")
+	i.logger.LogInfo("Starting components")
+	container.StartComponents()
+	i.logger.LogInfo("Ready")
 
 }
 
@@ -69,7 +69,6 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 		return nil
 	}
 
-
 	configFiles = append(configFiles, expandedPaths...)
 
 	if i.logger.IsLevelEnabled(logger.Debug) {
@@ -81,8 +80,6 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 		}
 	}
 
-
-
 	jsonMerger := new(jsonmerger.JsonMerger)
 	jsonMerger.Logger = frameworkLoggingManager.CreateLogger(jsonMergerComponentName)
 
@@ -91,38 +88,37 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 	return &config.ConfigAccessor{mergedJson}
 }
 
-func (i *Initiator) parseArgs() (map[string]string) {
-    configFilePtr := flag.String("c", "resources/config", "Path to container configuration files")
-    startupLogLevel := flag.String("l", "INFO", "Logging threshold for messages from components during bootstrap")
-    flag.Parse()
+func (i *Initiator) parseArgs() map[string]string {
+	configFilePtr := flag.String("c", "resources/config", "Path to container configuration files")
+	startupLogLevel := flag.String("l", "INFO", "Logging threshold for messages from components during bootstrap")
+	flag.Parse()
 
+	var params map[string]string
+	params = make(map[string]string)
 
-    var params map[string]string
-    params = make(map[string]string)
+	params["config"] = *configFilePtr
+	params["logLevel"] = *startupLogLevel
 
-    params["config"] = *configFilePtr
-    params["logLevel"] = *startupLogLevel
-
-    return params
+	return params
 
 }
 
 func (i *Initiator) splitConfigPaths(pathArgument string) []string {
-    return strings.Split(pathArgument, ",")
+	return strings.Split(pathArgument, ",")
 }
 
 func (i *Initiator) builtInConfigPaths() []string {
 
-    const builtInConfigPath = "/resource/facility-config"
+	const builtInConfigPath = "/resource/facility-config"
 
-    configFolder := config.QuiltHome() + builtInConfigPath
+	configFolder := config.QuiltHome() + builtInConfigPath
 
-    files, err := config.FindConfigFilesInDir(configFolder)
+	files, err := config.FindConfigFilesInDir(configFolder)
 
-    if err != nil {
-        i.logger.LogFatal("Unable to load config from folder " + configFolder + " " + err.Error())
-    }
+	if err != nil {
+		i.logger.LogFatal("Unable to load config from folder " + configFolder + " " + err.Error())
+	}
 
-    return files
+	return files
 
 }

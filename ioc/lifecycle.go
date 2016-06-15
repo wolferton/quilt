@@ -1,9 +1,9 @@
 package ioc
 
 type Startable interface {
-    StartComponent()
+	StartComponent()
 }
 
 type Stoppable interface {
-    StopComponent()
+	StopComponent()
 }

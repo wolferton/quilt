@@ -1,13 +1,13 @@
 package querymanager
 
 import (
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/config"
+	"github.com/wolferton/quilt/facility/logger"
 )
 
 type QueryManager struct {
 	TemplateLocation string
-	FrameworkLogger logger.Logger
+	FrameworkLogger  logger.Logger
 }
 
 func (qm *QueryManager) StartComponent() {
@@ -25,7 +25,6 @@ func (qm *QueryManager) StartComponent() {
 
 }
 
-func (qm *QueryManager) parseQueryFiles(files []string){
+func (qm *QueryManager) parseQueryFiles(files []string) {
 
 }
-
