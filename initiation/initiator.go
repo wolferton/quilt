@@ -63,10 +63,10 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 	configFiles := i.builtInConfigPaths()
 	configFiles = append(configFiles, i.splitConfigPaths(configPath)...)
 
-	i.logger.LogInfo("Loading configuration from: ")
+	i.logger.LogDebug("Loading configuration from: ")
 
 	for _, fileName := range configFiles {
-		i.logger.LogInfo(fileName)
+		i.logger.LogDebug(fileName)
 	}
 
 	jsonMerger := new(jsonmerger.JsonMerger)

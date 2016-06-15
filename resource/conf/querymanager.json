@@ -1,8 +1,8 @@
 {
   "facilities":{
     "queryManager":{
-      "enabled": true,
-      "TemplateLocation": "queries"
+      "enabled": false,
+      "TemplateLocation": "resource/queries"
     }
   }
 }

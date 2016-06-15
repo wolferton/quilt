@@ -85,6 +85,7 @@ func (fi *FacilitiesInitialisor) InitialiseQueryManager(protoComponents []*ioc.P
 	} else {
 
 		queryManager := new(querymanager.QueryManager)
+		queryManager.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(queryManagerComponentName)
 		fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.queryManager", queryManager)
 
 		proto := ioc.CreateProtoComponent(queryManager, queryManagerComponentName)

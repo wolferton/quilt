@@ -63,7 +63,7 @@ func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*Pr
 
 		for fieldName, depName := range proto.Dependencies {
 
-			cc.logger.LogDebug(fieldName + " needs " + depName)
+			cc.logger.LogTrace(fieldName + " needs " + depName)
 
 			requiredComponent := cc.allComponents[depName]
 			requiredInstance := requiredComponent.Instance
@@ -73,7 +73,7 @@ func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*Pr
 		}
 
 		for fieldName, configPath := range proto.ConfigPromises {
-			cc.logger.LogDebug(fieldName + " needs " + configPath)
+			cc.logger.LogTrace(fieldName + " needs " + configPath)
 
 			cc.configInjector.PopulateFieldFromJsonPath(fieldName, configPath, proto.Component.Instance)
 
@@ -116,7 +116,7 @@ func (cc *ComponentContainer) mapComponentToType(component *Component) {
 	componentType := reflect.TypeOf(component.Instance)
 	typeName := componentType.String()
 
-	cc.logger.LogDebug("Storing component" + component.Name + " of type " + componentType.String())
+	cc.logger.LogTrace("Storing component " + component.Name + " of type " + componentType.String())
 
 	componentsOfSameType := cc.componentsByType[typeName]
 
