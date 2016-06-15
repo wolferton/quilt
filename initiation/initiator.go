@@ -61,7 +61,16 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
 func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingManager *logger.ComponentLoggerManager) *config.ConfigAccessor {
 	configFiles := i.builtInConfigPaths()
-	configFiles = append(configFiles, i.splitConfigPaths(configPath)...)
+
+	expandedPaths, err := config.ExpandToFiles(i.splitConfigPaths(configPath))
+
+	if err != nil {
+		i.logger.LogFatal("Unable to load specified config files: " + err.Error())
+		return nil
+	}
+
+
+	configFiles = append(configFiles, expandedPaths...)
 
 	i.logger.LogDebug("Loading configuration from: ")
 
@@ -78,7 +87,7 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 }
 
 func (i *Initiator) parseArgs() (map[string]string) {
-    configFilePtr := flag.String("c", "config.json", "Path to container configuration file")
+    configFilePtr := flag.String("c", "resources/config", "Path to container configuration files")
     startupLogLevel := flag.String("l", "INFO", "Logging threshold for messages from components during bootstrap")
     flag.Parse()
 
