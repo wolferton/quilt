@@ -107,13 +107,15 @@ type ConfigInjector struct {
 
 func (ci *ConfigInjector) PopulateFieldFromJsonPath(fieldName string, path string, target interface{}) {
 
+	ca := ci.ConfigAccessor
 	targetReflect := reflect.ValueOf(target).Elem()
 	targetField := targetReflect.FieldByName(fieldName)
 
 	switch targetField.Type().Kind() {
 	case reflect.String:
-		configValue := ci.ConfigAccessor.StringVal(path)
-		targetField.SetString(configValue)
+		targetField.SetString(ca.StringVal(path))
+	case reflect.Bool:
+		targetField.SetBool(ca.BoolValue(path))
 	default:
 		ci.FrameworkLogger.LogError("Unable to use value at path " + path + " as target field " + fieldName + " is not a suppported type")
 	}

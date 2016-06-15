@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -78,13 +79,15 @@ func FileListFromPath(path string) ([]string, error) {
 	if fileInfo.IsDir() {
 		contents, err := ioutil.ReadDir(path)
 
+		fmt.Println(path + " is dir")
+
 		if err != nil {
 			err := errors.New("Unable to read contents of directory " + path)
 			return files, err
 		}
 
 		for _, info := range contents {
-
+			fmt.Println(path + " contains " + info.Name())
 			fileName := info.Name()
 			files = append(files, path+"/"+fileName)
 		}

@@ -2,7 +2,13 @@
   "facilities":{
     "queryManager":{
       "enabled": false,
-      "TemplateLocation": "resource/queries"
+      "TemplateLocation": "resource/queries",
+      "QueryIdPrefix": "ID::",
+      "TrimIdWhiteSpace": true,
+      "VarStart": "${",
+      "VarEnd": "}",
+      "WrapStrings": true,
+      "StringWrapWith": "'"
     }
   }
 }

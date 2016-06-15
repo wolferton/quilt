@@ -9,6 +9,7 @@ import (
 	"github.com/wolferton/quilt/ioc"
 	"os"
 	"strings"
+	"time"
 )
 
 const initiatorComponentName string = "quiltFrameworkInitiator"
@@ -57,6 +58,10 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 	container.StartComponents()
 	i.logger.LogInfo("Ready")
 
+	for {
+		time.Sleep(100000000000)
+	}
+
 }
 
 func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingManager *logger.ComponentLoggerManager) *config.ConfigAccessor {
@@ -89,7 +94,7 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 }
 
 func (i *Initiator) parseArgs() map[string]string {
-	configFilePtr := flag.String("c", "resources/config", "Path to container configuration files")
+	configFilePtr := flag.String("c", "resource/config", "Path to container configuration files")
 	startupLogLevel := flag.String("l", "INFO", "Logging threshold for messages from components during bootstrap")
 	flag.Parse()
 

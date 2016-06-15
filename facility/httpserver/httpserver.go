@@ -60,6 +60,8 @@ func (qhs *QuiltHttpServer) mapHandler(endPoint *HttpEndPoint) {
 
 func (qhs *QuiltHttpServer) StartComponent() {
 
+	fmt.Println("starting HTTP")
+
 	qhs.methodsToHandlerPatterns = make(map[string][]*HandlerPattern)
 
 	endpoints := qhs.componentContainer.FindByType("*httpserver.HttpEndPoint")
@@ -80,11 +82,13 @@ func (qhs *QuiltHttpServer) StartComponent() {
 
 	listenAddress := fmt.Sprintf(":%d", qhs.Config.Port)
 
-	err := http.ListenAndServe(listenAddress, nil)
+	go http.ListenAndServe(listenAddress, nil)
 
-	if err != nil {
-		//log.Fatal("ListenAndServe:", err)
-	}
+	qhs.Logger.LogInfo("HTTP server started")
+
+	//if err != nil {
+	//log.Fatal("ListenAndServe:", err)
+	//}
 }
 
 func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request *http.Request) {
