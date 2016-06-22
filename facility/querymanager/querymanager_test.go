@@ -23,7 +23,7 @@ func TestSingleSingleQueryNoVars(t *testing.T) {
 
 }
 
-func TestSingleSingleQueryIndexVars(t *testing.T) {
+func TestSingleQueryIndexVars(t *testing.T) {
 
 	queryFiles := []string{os.Getenv("QUILT_HOME") + "/test/querymanager/single-query-index-vars"}
 	qm := buildQueryManager()
@@ -34,6 +34,7 @@ func TestSingleSingleQueryIndexVars(t *testing.T) {
 
 	if members != 1 {
 		t.Errorf("Expected one entry in tokens map, found %d", members)
+		t.FailNow()
 	}
 
 	tokenisedQuery := tt["SINGLE_QUERY_INDEX_VARS"]
@@ -42,9 +43,34 @@ func TestSingleSingleQueryIndexVars(t *testing.T) {
 		t.Errorf("Expected a query named SINGLE_QUERY_INDEX_VARS")
 	}
 
-	stringQuery := ToString(tokenisedQuery)
+	stringQuery := ToString(tokenisedQuery.Tokens)
 	fmt.Print(stringQuery)
 
+}
+
+func TestMultiQueryNameVars(t *testing.T) {
+
+	queryFiles := []string{os.Getenv("QUILT_HOME") + "/test/querymanager/multi-query-name-vars"}
+	qm := buildQueryManager()
+
+	tt := qm.parseQueryFiles(queryFiles)
+
+	members := len(tt)
+
+	if members != 2 {
+		t.Errorf("Expected two entries in tokens map, found %d", members)
+		t.FailNow()
+	}
+
+	/*tokenisedQuery := tt["SINGLE_QUERY_INDEX_VARS"]
+
+	if tokenisedQuery == nil {
+		t.Errorf("Expected a query named SINGLE_QUERY_INDEX_VARS")
+	}
+
+	stringQuery := ToString(tokenisedQuery.Tokens)
+	fmt.Print(stringQuery)
+	*/
 }
 
 func ToString(tokens []*QueryTemplateToken) string {
@@ -64,7 +90,7 @@ func buildQueryManager() *QueryManager {
 	qm.QueryIdPrefix = "ID:"
 	qm.StringWrapWith = "'"
 	qm.TrimIdWhiteSpace = true
-	qm.VarMatchRegEx = "\\$\\{[^\\}]\\}"
+	qm.VarMatchRegEx = "\\$\\{([^\\}])\\}"
 	qm.NewLine = "\n"
 	qm.FrameworkLogger = logger.CreateAnonymousLogger("querymanager_test", 0)
 

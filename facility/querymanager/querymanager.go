@@ -9,13 +9,17 @@ text queries.
 package querymanager
 
 import (
-	"bufio"
+	//"bufio"
 	//"bytes"
 	//"fmt"
 	"fmt"
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/logger"
 	"os"
+	//"regexp"
+	//"strconv"
+	"bufio"
+	"bytes"
 	"regexp"
 	"strconv"
 	"strings"
@@ -30,7 +34,7 @@ type QueryManager struct {
 	WrapStrings        bool
 	StringWrapWith     string
 	NewLine            string
-	tokenisedTemplates map[string][]*QueryTemplateToken
+	tokenisedTemplates map[string]*QueryTemplate
 }
 
 func (qm *QueryManager) StartComponent() {
@@ -50,10 +54,10 @@ func (qm *QueryManager) StartComponent() {
 
 }
 
-func (qm *QueryManager) parseQueryFiles(files []string) map[string][]*QueryTemplateToken {
-
+func (qm *QueryManager) parseQueryFiles(files []string) map[string]*QueryTemplate {
 	fl := qm.FrameworkLogger
-	tokenisedTemplates := map[string][]*QueryTemplateToken{}
+	tokenisedTemplates := map[string]*QueryTemplate{}
+	re := regexp.MustCompile(qm.VarMatchRegEx)
 
 	for _, filePath := range files {
 
@@ -69,128 +73,105 @@ func (qm *QueryManager) parseQueryFiles(files []string) map[string][]*QueryTempl
 		defer file.Close()
 
 		scanner := bufio.NewScanner(file)
-		idPrefix := qm.QueryIdPrefix
-		trimId := qm.TrimIdWhiteSpace
-
-		var queryTokens = []*QueryTemplateToken{}
-		var currentToken *QueryTemplateToken = nil
-		var id string
-		re := regexp.MustCompile("\\$\\{([^\\}])\\}")
-
-		for scanner.Scan() {
-			line := scanner.Text()
-
-			if strings.HasPrefix(line, idPrefix) {
-				newId := strings.TrimPrefix(line, idPrefix)
-
-				if trimId {
-					newId = strings.TrimSpace(newId)
-				}
-
-				if id == "" {
-					id = newId
-				}
-
-				if currentToken != nil {
-					queryTokens = append(queryTokens, currentToken)
-					tokenisedTemplates[id] = queryTokens
-					queryTokens = []*QueryTemplateToken{}
-					id = newId
-				}
-
-				currentToken = NewQueryTemplateToken(Fragment)
-				queryTokens = append(queryTokens, currentToken)
-
-			} else if !qm.blankLine(line) {
-
-				matches := re.FindAllStringSubmatch(line, -1)
-
-				if matches == nil {
-					currentToken.AddContent(line + qm.NewLine)
-				} else {
-
-					queryTokens = qm.handleLineWithVars(currentToken, queryTokens, re, matches, line)
-					currentToken = queryTokens[len(queryTokens)-1]
-
-					if currentToken.Type != Fragment {
-						currentToken = NewQueryTemplateToken(Fragment)
-						queryTokens = append(queryTokens, currentToken)
-					}
-
-					currentToken.AddContent(qm.NewLine)
-				}
-
-			}
-		}
-
-		if currentToken != nil {
-			tokenisedTemplates[id] = queryTokens
-		}
+		qm.scanAndParse(scanner, tokenisedTemplates, re)
 	}
 
 	return tokenisedTemplates
 }
 
-func (qm *QueryManager) handleLineWithVars(currentToken *QueryTemplateToken, queryTokens []*QueryTemplateToken, re *regexp.Regexp, matches [][]string, line string) []*QueryTemplateToken {
+func (qm *QueryManager) scanAndParse(scanner *bufio.Scanner, tokenisedTemplates map[string]*QueryTemplate, re *regexp.Regexp) {
 
-	fragments := re.Split(line, -1)
+	var currentTemplate *QueryTemplate = nil
 
-	firstMatch := re.FindStringIndex(line)
+	for scanner.Scan() {
+		line := scanner.Text()
 
-	startsWithVar := (firstMatch[0] == 0)
-	varCount := len(matches)
-	fragmentCount := len(fragments)
+		idLine, id := qm.isIdLine(line)
 
-	for i := 0; i < varCount && i < fragmentCount; i++ {
+		if idLine {
+			currentTemplate = NewQueryTemplate(id)
+			defer currentTemplate.Finalise()
+			tokenisedTemplates[id] = currentTemplate
+			continue
+		}
 
-		var varToken *QueryTemplateToken = nil
-		var fragToken *QueryTemplateToken = nil
+		varTokens := re.FindAllStringSubmatch(line, -1)
 
-		if i < varCount {
-			varLabel := matches[i][1]
+		if varTokens == nil {
+			currentTemplate.AddFragmentContent(line)
+		} else {
 
-			index, err := strconv.Atoi(varLabel)
+			fragments := re.Split(line, -1)
+			firstMatch := re.FindStringIndex(line)
 
-			if err == nil {
-				varToken = NewQueryTemplateToken(VarIndex)
-				varToken.Index = index
-			} else {
-				varToken = NewQueryTemplateToken(VarName)
-				varToken.Content = varLabel
+			startsWithVar := (firstMatch[0] == 0)
+			varCount := len(varTokens)
+			fragmentCount := len(fragments)
+
+			for i := 0; i < varCount && i < fragmentCount; i++ {
+
+				varAvailable := i < varCount
+				fragAvailable := i < fragmentCount
+
+				if varAvailable && fragAvailable {
+
+					varToken := varTokens[i][1]
+					fragment := fragments[i]
+
+					if startsWithVar {
+						qm.addVar(varToken, currentTemplate)
+						currentTemplate.AddFragmentContent(fragment)
+					} else {
+						currentTemplate.AddFragmentContent(fragment)
+						qm.addVar(varToken, currentTemplate)
+
+					}
+
+				} else if varAvailable {
+					qm.addVar(varTokens[i][1], currentTemplate)
+
+				} else if fragAvailable {
+					currentTemplate.AddFragmentContent(fragments[i])
+				}
+
 			}
 		}
 
-		if i < fragmentCount {
-			fragToken = NewQueryTemplateToken(Fragment)
-			fragToken.AddContent(fragments[i])
-		}
-
-		if startsWithVar {
-			queryTokens = qm.AddTokens(varToken, fragToken, queryTokens)
-
-		} else {
-			queryTokens = qm.AddTokens(fragToken, varToken, queryTokens)
-		}
+		currentTemplate.EndLine()
 
 	}
 
-	return queryTokens
 }
 
-func (qm *QueryManager) AddTokens(first *QueryTemplateToken, second *QueryTemplateToken, tokens []*QueryTemplateToken) []*QueryTemplateToken {
+func (qm *QueryManager) addVar(token string, currentTemplate *QueryTemplate) {
 
-	if first != nil {
-		tokens = append(tokens, first)
+	index, err := strconv.Atoi(token)
+
+	if err == nil {
+		currentTemplate.AddIndexedVar(index)
+	} else {
+		currentTemplate.AddLabelledVar(token)
 	}
-
-	if second != nil {
-		tokens = append(tokens, second)
-	}
-
-	return tokens
 }
 
-func (qm *QueryManager) blankLine(line string) bool {
+func (qm *QueryManager) isIdLine(line string) (bool, string) {
+	idPrefix := qm.QueryIdPrefix
+
+	if strings.HasPrefix(line, idPrefix) {
+		newId := strings.TrimPrefix(line, idPrefix)
+
+		if qm.TrimIdWhiteSpace {
+			newId = strings.TrimSpace(newId)
+		}
+
+		return true, newId
+
+	} else {
+		return false, ""
+	}
+}
+
+func (qm *QueryManager) isBlankLine(line string) bool {
 	return len(strings.TrimSpace(line)) == 0
 }
 
@@ -202,6 +183,64 @@ const (
 	VarIndex
 	Empty
 )
+
+type QueryTemplate struct {
+	Tokens         []*QueryTemplateToken
+	Id             string
+	currentToken   *QueryTemplateToken
+	fragmentBuffer bytes.Buffer
+}
+
+func (qt *QueryTemplate) Finalise() {
+	fmt.Println("finalising " + qt.Id)
+}
+
+func (qt *QueryTemplate) AddFragmentContent(fragment string) {
+
+	t := qt.currentToken
+
+	if t == nil || t.Type != Fragment {
+		t = NewQueryTemplateToken(Fragment)
+		qt.Tokens = append(qt.Tokens, t)
+		qt.currentToken = t
+	}
+
+	t.AddContent(fragment)
+}
+
+func (qt *QueryTemplate) AddIndexedVar(index int) {
+
+	t := qt.currentToken
+
+	t = NewQueryTemplateToken(VarIndex)
+	t.Index = index
+
+	qt.Tokens = append(qt.Tokens, t)
+	qt.currentToken = t
+}
+
+func (qt *QueryTemplate) AddLabelledVar(label string) {
+
+	t := qt.currentToken
+
+	t = NewQueryTemplateToken(VarName)
+	t.Content = label
+
+	qt.Tokens = append(qt.Tokens, t)
+	qt.currentToken = t
+}
+
+func (qt *QueryTemplate) EndLine() {
+	qt.AddFragmentContent("\n")
+}
+
+func NewQueryTemplate(id string) *QueryTemplate {
+	t := new(QueryTemplate)
+	t.Id = id
+	t.currentToken = nil
+
+	return t
+}
 
 type QueryTemplateToken struct {
 	Type    QueryTokenType

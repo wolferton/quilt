@@ -5,7 +5,7 @@
       "TemplateLocation": "resource/queries",
       "QueryIdPrefix": "ID:",
       "TrimIdWhiteSpace": true,
-      "VarMatchRegex": "\\$\\{[^\\}]\\}",
+      "VarMatchRegex": "\\$\\{([^\\}])\\}",
       "WrapStrings": true,
       "StringWrapWith": "'",
       "NewLine": "\n"
