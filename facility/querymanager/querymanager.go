@@ -75,6 +75,7 @@ func (qm *QueryManager) parseQueryFiles(files []string) map[string][]*QueryTempl
 		var queryTokens = []*QueryTemplateToken{}
 		var currentToken *QueryTemplateToken = nil
 		var id string
+		re := regexp.MustCompile("\\$\\{([^\\}])\\}")
 
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -102,54 +103,13 @@ func (qm *QueryManager) parseQueryFiles(files []string) map[string][]*QueryTempl
 
 			} else if !qm.blankLine(line) {
 
-				re := regexp.MustCompile("\\$\\{([^\\}])\\}")
-
 				matches := re.FindAllStringSubmatch(line, -1)
 
 				if matches == nil {
 					currentToken.AddContent(line + qm.NewLine)
 				} else {
-					fragments := re.Split(line, -1)
 
-					firstMatch := re.FindStringIndex(line)
-
-					startsWithVar := (firstMatch[0] == 0)
-					varCount := len(matches)
-					fragmentCount := len(fragments)
-
-					for i := 0; i < varCount && i < fragmentCount; i++ {
-
-						var varToken *QueryTemplateToken = nil
-						var fragToken *QueryTemplateToken = nil
-
-						if i < varCount {
-							varLabel := matches[i][1]
-
-							index, err := strconv.Atoi(varLabel)
-
-							if err == nil {
-								varToken = NewQueryTemplateToken(VarIndex)
-								varToken.Index = index
-							} else {
-								varToken = NewQueryTemplateToken(VarName)
-								varToken.Content = varLabel
-							}
-						}
-
-						if i < fragmentCount {
-							fragToken = NewQueryTemplateToken(Fragment)
-							fragToken.AddContent(fragments[i])
-						}
-
-						if startsWithVar {
-							queryTokens = qm.AddTokens(varToken, fragToken, queryTokens)
-
-						} else {
-							queryTokens = qm.AddTokens(fragToken, varToken, queryTokens)
-						}
-
-					}
-
+					queryTokens = qm.handleLineWithVars(currentToken, queryTokens, re, matches, line)
 					currentToken = queryTokens[len(queryTokens)-1]
 
 					if currentToken.Type != Fragment {
@@ -164,12 +124,57 @@ func (qm *QueryManager) parseQueryFiles(files []string) map[string][]*QueryTempl
 		}
 
 		if currentToken != nil {
-			//fl.LogTrace("Storing query with id " + id)
 			tokenisedTemplates[id] = queryTokens
 		}
 	}
 
 	return tokenisedTemplates
+}
+
+func (qm *QueryManager) handleLineWithVars(currentToken *QueryTemplateToken, queryTokens []*QueryTemplateToken, re *regexp.Regexp, matches [][]string, line string) []*QueryTemplateToken {
+
+	fragments := re.Split(line, -1)
+
+	firstMatch := re.FindStringIndex(line)
+
+	startsWithVar := (firstMatch[0] == 0)
+	varCount := len(matches)
+	fragmentCount := len(fragments)
+
+	for i := 0; i < varCount && i < fragmentCount; i++ {
+
+		var varToken *QueryTemplateToken = nil
+		var fragToken *QueryTemplateToken = nil
+
+		if i < varCount {
+			varLabel := matches[i][1]
+
+			index, err := strconv.Atoi(varLabel)
+
+			if err == nil {
+				varToken = NewQueryTemplateToken(VarIndex)
+				varToken.Index = index
+			} else {
+				varToken = NewQueryTemplateToken(VarName)
+				varToken.Content = varLabel
+			}
+		}
+
+		if i < fragmentCount {
+			fragToken = NewQueryTemplateToken(Fragment)
+			fragToken.AddContent(fragments[i])
+		}
+
+		if startsWithVar {
+			queryTokens = qm.AddTokens(varToken, fragToken, queryTokens)
+
+		} else {
+			queryTokens = qm.AddTokens(fragToken, varToken, queryTokens)
+		}
+
+	}
+
+	return queryTokens
 }
 
 func (qm *QueryManager) AddTokens(first *QueryTemplateToken, second *QueryTemplateToken, tokens []*QueryTemplateToken) []*QueryTemplateToken {

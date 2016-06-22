@@ -45,10 +45,6 @@ func TestSingleSingleQueryIndexVars(t *testing.T) {
 	stringQuery := ToString(tokenisedQuery)
 	fmt.Print(stringQuery)
 
-	if len(tokenisedQuery) != 6 {
-		t.Errorf("Expected query to be broken into 6 tokens, found %d", len(tokenisedQuery))
-	}
-
 }
 
 func ToString(tokens []*QueryTemplateToken) string {
