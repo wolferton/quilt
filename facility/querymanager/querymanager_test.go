@@ -2,9 +2,10 @@ package querymanager
 
 import (
 	"bytes"
-	"fmt"
 	"github.com/wolferton/quilt/facility/logger"
+	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -44,7 +45,12 @@ func TestSingleQueryIndexVars(t *testing.T) {
 	}
 
 	stringQuery := ToString(tokenisedQuery.Tokens)
-	fmt.Print(stringQuery)
+
+	refQuery := LoadRefFile("/test/querymanager/single-query-index-vars-ref")
+
+	if stringQuery != refQuery {
+		t.Errorf("Generated query and reference query do not match. \nGEN:%s\nREF:%s\n", VisibleWhitespace(stringQuery), VisibleWhitespace(refQuery))
+	}
 
 }
 
@@ -62,15 +68,33 @@ func TestMultiQueryNameVars(t *testing.T) {
 		t.FailNow()
 	}
 
-	/*tokenisedQuery := tt["SINGLE_QUERY_INDEX_VARS"]
+	tokenisedQueryTwo := tt["MULTI_QUERY_INDEX_VARS_TWO"]
 
-	if tokenisedQuery == nil {
-		t.Errorf("Expected a query named SINGLE_QUERY_INDEX_VARS")
+	if tokenisedQueryTwo == nil {
+		t.Errorf("Expected a query named MULTI_QUERY_INDEX_VARS_TWO")
 	}
 
-	stringQuery := ToString(tokenisedQuery.Tokens)
-	fmt.Print(stringQuery)
-	*/
+	stringQuery := ToString(tokenisedQueryTwo.Tokens)
+
+	refQuery := LoadRefFile("/test/querymanager/multi-query-name-vars-ref-2")
+
+	if stringQuery != refQuery {
+		t.Errorf("Generated query and reference query do not match. \nGEN:%s\nREF:%s\n", VisibleWhitespace(stringQuery), VisibleWhitespace(refQuery))
+	}
+}
+
+func VisibleWhitespace(query string) string {
+
+	nonewline := strings.Replace(query, "\n", "\\n", -1)
+
+	return strings.Replace(nonewline, "\t", "\\t", -1)
+
+}
+
+func LoadRefFile(path string) string {
+	bytes, _ := ioutil.ReadFile(os.Getenv("QUILT_HOME") + path)
+
+	return string(bytes)
 }
 
 func ToString(tokens []*QueryTemplateToken) string {

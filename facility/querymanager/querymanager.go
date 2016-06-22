@@ -82,6 +82,7 @@ func (qm *QueryManager) parseQueryFiles(files []string) map[string]*QueryTemplat
 func (qm *QueryManager) scanAndParse(scanner *bufio.Scanner, tokenisedTemplates map[string]*QueryTemplate, re *regexp.Regexp) {
 
 	var currentTemplate *QueryTemplate = nil
+	var fragmentBuffer bytes.Buffer
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -89,9 +90,17 @@ func (qm *QueryManager) scanAndParse(scanner *bufio.Scanner, tokenisedTemplates 
 		idLine, id := qm.isIdLine(line)
 
 		if idLine {
-			currentTemplate = NewQueryTemplate(id)
-			defer currentTemplate.Finalise()
+
+			if currentTemplate != nil {
+				currentTemplate.Finalise()
+			}
+
+			currentTemplate = NewQueryTemplate(id, &fragmentBuffer)
 			tokenisedTemplates[id] = currentTemplate
+			continue
+		}
+
+		if qm.isBlankLine(line) {
 			continue
 		}
 
@@ -141,6 +150,10 @@ func (qm *QueryManager) scanAndParse(scanner *bufio.Scanner, tokenisedTemplates 
 
 	}
 
+	if currentTemplate != nil {
+		currentTemplate.Finalise()
+	}
+
 }
 
 func (qm *QueryManager) addVar(token string, currentTemplate *QueryTemplate) {
@@ -181,18 +194,18 @@ const (
 	Fragment = iota
 	VarName
 	VarIndex
-	Empty
 )
 
 type QueryTemplate struct {
 	Tokens         []*QueryTemplateToken
 	Id             string
 	currentToken   *QueryTemplateToken
-	fragmentBuffer bytes.Buffer
+	fragmentBuffer *bytes.Buffer
 }
 
 func (qt *QueryTemplate) Finalise() {
-	fmt.Println("finalising " + qt.Id)
+	qt.closeFragmentToken()
+	qt.fragmentBuffer = nil
 }
 
 func (qt *QueryTemplate) AddFragmentContent(fragment string) {
@@ -205,11 +218,22 @@ func (qt *QueryTemplate) AddFragmentContent(fragment string) {
 		qt.currentToken = t
 	}
 
-	t.AddContent(fragment)
+	qt.fragmentBuffer.WriteString(fragment)
+}
+
+func (qt *QueryTemplate) closeFragmentToken() {
+
+	t := qt.currentToken
+	if t.Type == Fragment {
+		t.Content = qt.fragmentBuffer.String()
+		qt.fragmentBuffer.Reset()
+	}
+
 }
 
 func (qt *QueryTemplate) AddIndexedVar(index int) {
 
+	qt.closeFragmentToken()
 	t := qt.currentToken
 
 	t = NewQueryTemplateToken(VarIndex)
@@ -221,6 +245,7 @@ func (qt *QueryTemplate) AddIndexedVar(index int) {
 
 func (qt *QueryTemplate) AddLabelledVar(label string) {
 
+	qt.closeFragmentToken()
 	t := qt.currentToken
 
 	t = NewQueryTemplateToken(VarName)
@@ -234,10 +259,11 @@ func (qt *QueryTemplate) EndLine() {
 	qt.AddFragmentContent("\n")
 }
 
-func NewQueryTemplate(id string) *QueryTemplate {
+func NewQueryTemplate(id string, buffer *bytes.Buffer) *QueryTemplate {
 	t := new(QueryTemplate)
 	t.Id = id
 	t.currentToken = nil
+	t.fragmentBuffer = buffer
 
 	return t
 }
@@ -253,11 +279,6 @@ func NewQueryTemplateToken(tokenType QueryTokenType) *QueryTemplateToken {
 	token.Type = tokenType
 
 	return token
-}
-
-func (qtt *QueryTemplateToken) AddContent(content string) {
-
-	qtt.Content += content
 }
 
 func (qtt *QueryTemplateToken) GetContent() string {

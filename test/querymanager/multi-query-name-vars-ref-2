@@ -1,0 +1,6 @@
+SELECT
+    v
+FROM
+    VN:x
+WHERE
+    VN:y = VN:z
