@@ -3,12 +3,12 @@
     "queryManager":{
       "enabled": false,
       "TemplateLocation": "resource/queries",
-      "QueryIdPrefix": "ID::",
+      "QueryIdPrefix": "ID:",
       "TrimIdWhiteSpace": true,
-      "VarStart": "${",
-      "VarEnd": "}",
+      "VarMatchRegex": "\\$\\{[^\\}]\\}",
       "WrapStrings": true,
-      "StringWrapWith": "'"
+      "StringWrapWith": "'",
+      "NewLine": "\n"
     }
   }
 }

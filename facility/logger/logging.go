@@ -182,3 +182,12 @@ func (clm *ComponentLoggerManager) CreateLoggerAtLevel(componentId string, thres
 
 	return logger
 }
+
+func CreateAnonymousLogger(componentId string, threshold int) Logger {
+	logger := new(LevelAwareLogger)
+	logger.globalLogThreshold = threshold
+	logger.localLogThreshhold = threshold
+	logger.loggerName = componentId
+
+	return logger
+}
