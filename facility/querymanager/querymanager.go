@@ -9,17 +9,12 @@ text queries.
 package querymanager
 
 import (
-	//"bufio"
-	//"bytes"
-	//"fmt"
+	"bufio"
+	"bytes"
 	"fmt"
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/logger"
 	"os"
-	//"regexp"
-	//"strconv"
-	"bufio"
-	"bytes"
 	"regexp"
 	"strconv"
 	"strings"

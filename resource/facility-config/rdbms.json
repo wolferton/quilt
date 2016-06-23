@@ -1,0 +1,8 @@
+{
+  "facilities":{
+    "databaseAccessor":{
+      "enabled": false,
+      "DatabaseProviderComponentName": "databaseProvider"
+    }
+  }
+}

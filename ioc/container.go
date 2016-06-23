@@ -1,8 +1,11 @@
 package ioc
 
 import (
+	"errors"
+	"fmt"
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/logger"
+	"os"
 	"reflect"
 )
 
@@ -53,19 +56,34 @@ func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, config
 
 	}
 
-	cc.resolveDependenciesAndConfig(protoComponents, configAccessor)
+	err := cc.resolveDependenciesAndConfig(protoComponents, configAccessor)
+
+	if err != nil {
+		cc.logger.LogFatal(err.Error())
+		cc.logger.LogInfo("Aborting startup")
+		os.Exit(-1)
+	}
+
 	cc.decorateComponents(decorators)
 }
 
-func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*ProtoComponent, configAccessor *config.ConfigAccessor) {
+func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*ProtoComponent, configAccessor *config.ConfigAccessor) error {
+
+	fl := cc.logger
 
 	for _, proto := range protoComponents {
 
 		for fieldName, depName := range proto.Dependencies {
 
-			cc.logger.LogTrace(fieldName + " needs " + depName)
+			fl.LogTrace(proto.Component.Name + " needs " + depName)
 
 			requiredComponent := cc.allComponents[depName]
+
+			if requiredComponent == nil {
+				message := fmt.Sprintf("No component named %s available (required by %s.%s)", depName, proto.Component.Name, fieldName)
+				return errors.New(message)
+			}
+
 			requiredInstance := requiredComponent.Instance
 
 			targetReflect := reflect.ValueOf(proto.Component.Instance).Elem()
@@ -73,13 +91,15 @@ func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*Pr
 		}
 
 		for fieldName, configPath := range proto.ConfigPromises {
-			cc.logger.LogTrace(fieldName + " needs " + configPath)
+			fl.LogTrace(fieldName + " needs " + configPath)
 
 			cc.configInjector.PopulateFieldFromJsonPath(fieldName, configPath, proto.Component.Instance)
 
 		}
 
 	}
+
+	return nil
 }
 
 func (cc *ComponentContainer) decorateComponents(decorators []ComponentDecorator) {

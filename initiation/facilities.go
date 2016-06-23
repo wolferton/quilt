@@ -6,6 +6,7 @@ import (
 	"github.com/wolferton/quilt/facility/httpserver"
 	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/facility/querymanager"
+	"github.com/wolferton/quilt/facility/rdbms"
 	"github.com/wolferton/quilt/ioc"
 )
 
@@ -89,6 +90,23 @@ func (fi *FacilitiesInitialisor) InitialiseQueryManager(protoComponents []*ioc.P
 		fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.queryManager", queryManager)
 
 		proto := ioc.CreateProtoComponent(queryManager, queryManagerComponentName)
+
+		return append(protoComponents, proto)
+	}
+}
+
+func (fi *FacilitiesInitialisor) InitisaliseDatabaseAccessor(protoComponents []*ioc.ProtoComponent) []*ioc.ProtoComponent {
+	if !fi.ConfigAccessor.BoolValue("facilities.databaseAccessor.enabled") {
+		return protoComponents
+	} else {
+
+		accessor := new(rdbms.DatabaseAccessor)
+		accessor.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(queryManagerComponentName)
+		fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.databaseAccessor", accessor)
+
+		proto := ioc.CreateProtoComponent(accessor, queryManagerComponentName)
+
+		proto.AddDependency("Provider", accessor.DatabaseProviderComponentName)
 
 		return append(protoComponents, proto)
 	}

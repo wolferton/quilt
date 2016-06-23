@@ -51,6 +51,7 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 	protoComponents = facilitiesInitialisor.InitialiseApplicationLogger(protoComponents)
 	protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, configAccessor, frameworkLoggingManager)
 	protoComponents = facilitiesInitialisor.InitialiseQueryManager(protoComponents)
+	protoComponents = facilitiesInitialisor.InitisaliseDatabaseAccessor(protoComponents)
 
 	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
 
