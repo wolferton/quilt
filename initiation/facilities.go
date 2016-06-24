@@ -15,6 +15,7 @@ const frameworkLoggingManagerComponentName = "quiltFrameworkLoggingManager"
 const applicationLoggingDecoratorName = "quiltApplicationLoggingDecorator"
 const httpServerComponentName = "quiltHttpServer"
 const queryManagerComponentName = "quiltQueryManager"
+const dbAccessorComponentName = "quiltDatabaseAccessor"
 
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
@@ -101,10 +102,10 @@ func (fi *FacilitiesInitialisor) InitisaliseDatabaseAccessor(protoComponents []*
 	} else {
 
 		accessor := new(rdbms.DatabaseAccessor)
-		accessor.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(queryManagerComponentName)
+		accessor.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(dbAccessorComponentName)
 		fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.databaseAccessor", accessor)
 
-		proto := ioc.CreateProtoComponent(accessor, queryManagerComponentName)
+		proto := ioc.CreateProtoComponent(accessor, dbAccessorComponentName)
 
 		proto.AddDependency("Provider", accessor.DatabaseProviderComponentName)
 
