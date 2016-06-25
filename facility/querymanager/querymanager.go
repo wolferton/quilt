@@ -11,6 +11,7 @@ package querymanager
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/logger"
@@ -32,6 +33,45 @@ type QueryManager struct {
 	tokenisedTemplates map[string]*QueryTemplate
 }
 
+func (qm *QueryManager) SubstituteMap(queryId string, params map[string]interface{}) (string, error) {
+
+	template := qm.tokenisedTemplates[queryId]
+
+	if template == nil {
+		return "", errors.New("Unknown query " + queryId)
+	}
+
+	var b bytes.Buffer
+
+	for _, token := range template.Tokens {
+
+		if token.Type == Fragment {
+			b.WriteString(token.Content)
+		} else {
+
+			paramValue := params[token.Content]
+
+			if paramValue == nil {
+				return "", errors.New(fmt.Sprintf("Query %s requires a parameter named %s but none supplied.", queryId, token.Content))
+			}
+
+			switch t := paramValue.(type) {
+			default:
+				return "", errors.New(fmt.Sprintf("Value for paramter %s is not a supported type.", token.Content))
+			case string:
+				b.WriteString(t)
+			case int:
+				b.WriteString(strconv.Itoa(t))
+			}
+
+		}
+
+	}
+
+	return b.String(), nil
+
+}
+
 func (qm *QueryManager) StartComponent() {
 	fl := qm.FrameworkLogger
 	fl.LogDebug("Starting QueryManager")
@@ -42,7 +82,7 @@ func (qm *QueryManager) StartComponent() {
 	if err == nil {
 
 		qm.tokenisedTemplates = qm.parseQueryFiles(queryFiles)
-		fl.LogDebug("Started QueryManager")
+		fl.LogDebug(fmt.Sprintf("Started QueryManager with %d queries", len(qm.tokenisedTemplates)))
 	} else {
 		fl.LogFatal("Unable to start QueryManager due to problem loading query files: " + err.Error())
 	}
@@ -106,13 +146,16 @@ func (qm *QueryManager) scanAndParse(scanner *bufio.Scanner, tokenisedTemplates 
 		} else {
 
 			fragments := re.Split(line, -1)
+
 			firstMatch := re.FindStringIndex(line)
 
 			startsWithVar := (firstMatch[0] == 0)
 			varCount := len(varTokens)
 			fragmentCount := len(fragments)
 
-			for i := 0; i < varCount && i < fragmentCount; i++ {
+			maxCount := intMax(varCount, fragmentCount)
+
+			for i := 0; i < maxCount; i++ {
 
 				varAvailable := i < varCount
 				fragAvailable := i < fragmentCount
@@ -149,6 +192,14 @@ func (qm *QueryManager) scanAndParse(scanner *bufio.Scanner, tokenisedTemplates 
 		currentTemplate.Finalise()
 	}
 
+}
+
+func intMax(x, y int) int {
+	if x > y {
+		return x
+	} else {
+		return y
+	}
 }
 
 func (qm *QueryManager) addVar(token string, currentTemplate *QueryTemplate) {

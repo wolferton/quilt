@@ -13,6 +13,6 @@ ID:MULTI_QUERY_INDEX_VARS_TWO
 SELECT
     v
 FROM
-    ${x}
+    '${xa}'
 WHERE
-    ${y} = ${z}
+    '${y}' = ${z}

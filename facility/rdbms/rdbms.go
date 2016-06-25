@@ -17,11 +17,19 @@ type DatabaseAccessor struct {
 	DatabaseProviderComponentName string
 }
 
-func (da *DatabaseAccessor) InsertQueryIdParamObject(queryId string, params interface{}) error {
+func (da *DatabaseAccessor) InsertQueryIdParamMap(queryId string, params map[string]interface{}) (sql.Result, error) {
+
+	query, err := da.QueryManager.SubstituteMap(queryId, params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	da.FrameworkLogger.LogInfo(query)
 
 	db, err := da.Provider.Database()
 
-	err = db.Ping()
+	result, err := db.Exec(query)
 
-	return err
+	return result, err
 }

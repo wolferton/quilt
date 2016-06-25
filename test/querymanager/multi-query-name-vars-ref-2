@@ -1,6 +1,6 @@
 SELECT
     v
 FROM
-    VN:x
+    'VN:xa'
 WHERE
-    VN:y = VN:z
+    'VN:y' = VN:z

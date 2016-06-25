@@ -108,6 +108,7 @@ func (fi *FacilitiesInitialisor) InitisaliseDatabaseAccessor(protoComponents []*
 		proto := ioc.CreateProtoComponent(accessor, dbAccessorComponentName)
 
 		proto.AddDependency("Provider", accessor.DatabaseProviderComponentName)
+		proto.AddDependency("QueryManager", queryManagerComponentName)
 
 		return append(protoComponents, proto)
 	}

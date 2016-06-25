@@ -74,6 +74,12 @@ func TestMultiQueryNameVars(t *testing.T) {
 		t.Errorf("Expected a query named MULTI_QUERY_INDEX_VARS_TWO")
 	}
 
+	varsInQuery := NamedVarCount(tokenisedQueryTwo.Tokens)
+
+	if varsInQuery != 3 {
+		t.Errorf("Expected three named variables to be found in MULTI_QUERY_INDEX_VARS_TWO, found %d", varsInQuery)
+	}
+
 	stringQuery := ToString(tokenisedQueryTwo.Tokens)
 
 	refQuery := LoadRefFile("/test/querymanager/multi-query-name-vars-ref-2")
@@ -81,6 +87,22 @@ func TestMultiQueryNameVars(t *testing.T) {
 	if stringQuery != refQuery {
 		t.Errorf("Generated query and reference query do not match. \nGEN:%s\nREF:%s\n", VisibleWhitespace(stringQuery), VisibleWhitespace(refQuery))
 	}
+}
+
+func NamedVarCount(tokens []*QueryTemplateToken) int {
+
+	count := 0
+
+	for _, token := range tokens {
+
+		if token.Type == VarName {
+
+			count += 1
+		}
+
+	}
+
+	return count
 }
 
 func VisibleWhitespace(query string) string {
@@ -114,7 +136,7 @@ func buildQueryManager() *QueryManager {
 	qm.QueryIdPrefix = "ID:"
 	qm.StringWrapWith = "'"
 	qm.TrimIdWhiteSpace = true
-	qm.VarMatchRegEx = "\\$\\{([^\\}])\\}"
+	qm.VarMatchRegEx = "\\$\\{([^\\}]*)\\}"
 	qm.NewLine = "\n"
 	qm.FrameworkLogger = logger.CreateAnonymousLogger("querymanager_test", 0)
 
