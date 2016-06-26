@@ -22,12 +22,19 @@ type FrameworkLogSource interface {
 
 type Logger interface {
 	LogTrace(message string)
+	LogTracef(format string, a ...interface{})
 	LogDebug(message string)
+	LogDebugf(format string, a ...interface{})
 	LogInfo(message string)
+	LogInfof(format string, a ...interface{})
 	LogWarn(message string)
+	LogWarnf(format string, a ...interface{})
 	LogError(message string)
+	LogErrorf(format string, a ...interface{})
 	LogFatal(message string)
+	LogFatalf(format string, a ...interface{})
 	LogAtLevel(level int, levelLabel string, message string)
+	LogAtLevelf(level int, levelLabel string, format string, a ...interface{})
 	IsLevelEnabled(level int) bool
 }
 
@@ -67,15 +74,23 @@ type LevelAwareLogger struct {
 }
 
 func (lal *LevelAwareLogger) IsLevelEnabled(level int) bool {
-	return level >= lal.globalLogThreshold && level >= lal.localLogThreshhold
+	return level >= lal.localLogThreshhold || level >= lal.globalLogThreshold
 }
 
 func (lal *LevelAwareLogger) log(prefix string, level int, message string) {
 
-	if level >= lal.localLogThreshhold || level >= lal.globalLogThreshold {
-
+	if lal.IsLevelEnabled(level) {
 		t := time.Now()
 		fmt.Printf("%s %s %s %s\n", t.Format(time.RFC3339), prefix, lal.loggerName, message)
+	}
+
+}
+func (lal *LevelAwareLogger) logf(levelLabel string, level int, format string, a ...interface{}) {
+
+	if lal.IsLevelEnabled(level) {
+		t := time.Now()
+		message := fmt.Sprintf(format, a...)
+		fmt.Printf("%s %s %s %s\n", t.Format(time.RFC3339), levelLabel, lal.loggerName, message)
 	}
 
 }
@@ -84,28 +99,56 @@ func (lal *LevelAwareLogger) LogAtLevel(level int, levelLabel string, message st
 	lal.log(levelLabel, level, message)
 }
 
+func (lal *LevelAwareLogger) LogAtLevelf(level int, levelLabel string, format string, a ...interface{}) {
+	lal.logf(levelLabel, level, format, a...)
+}
+
 func (lal *LevelAwareLogger) LogTrace(message string) {
 	lal.log(TraceLabel, Trace, message)
+}
+
+func (lal *LevelAwareLogger) LogTracef(format string, a ...interface{}) {
+	lal.logf(TraceLabel, Trace, format, a...)
 }
 
 func (lal *LevelAwareLogger) LogDebug(message string) {
 	lal.log(DebugLabel, Debug, message)
 }
 
+func (lal *LevelAwareLogger) LogDebugf(format string, a ...interface{}) {
+	lal.logf(DebugLabel, Debug, format, a...)
+}
+
 func (lal *LevelAwareLogger) LogInfo(message string) {
 	lal.log(InfoLabel, Info, message)
+}
+
+func (lal *LevelAwareLogger) LogInfof(format string, a ...interface{}) {
+	lal.logf(InfoLabel, Info, format, a...)
 }
 
 func (lal *LevelAwareLogger) LogWarn(message string) {
 	lal.log(WarnLabel, Warn, message)
 }
 
+func (lal *LevelAwareLogger) LogWarnf(format string, a ...interface{}) {
+	lal.logf(WarnLabel, Warn, format, a...)
+}
+
 func (lal *LevelAwareLogger) LogError(message string) {
 	lal.log(ErrorLabel, Error, message)
 }
 
+func (lal *LevelAwareLogger) LogErrorf(format string, a ...interface{}) {
+	lal.logf(ErrorLabel, Error, format, a...)
+}
+
 func (lal *LevelAwareLogger) LogFatal(message string) {
 	lal.log(FatalLabel, Fatal, message)
+}
+
+func (lal *LevelAwareLogger) LogFatalf(format string, a ...interface{}) {
+	lal.logf(FatalLabel, Fatal, format, a...)
 }
 
 func (lal *LevelAwareLogger) SetGlobalThreshold(threshold int) {
