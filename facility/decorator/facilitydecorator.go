@@ -33,10 +33,10 @@ func (ald *ApplicationLogDecorator) OfInterest(component *ioc.Component) bool {
 
 	if frameworkLog.IsLevelEnabled(logger.Trace) {
 		if result {
-			frameworkLog.LogTrace(component.Name + " NEEDS an ApplicationLogger")
+			frameworkLog.LogTracef("%s NEEDS an ApplicationLogger", component.Name)
 
 		} else {
-			frameworkLog.LogTrace(component.Name + " does not need an ApplicationLogger")
+			frameworkLog.LogTracef("%s does not need an ApplicationLogger", component.Name)
 		}
 	}
 
@@ -53,7 +53,7 @@ func (ald *ApplicationLogDecorator) DecorateComponent(component *ioc.Component, 
 		reflectComponent := reflect.ValueOf(component.Instance).Elem()
 		reflectComponent.FieldByName(expectedApplicationLoggerFieldName).Set(reflect.ValueOf(logger))
 	} else {
-		ald.FrameworkLogger.LogError("Unable to inject an ApplicationLogger into component " + component.Name + " because field " + expectedApplicationLoggerFieldName + " is not of the expected type logger.Logger")
+		ald.FrameworkLogger.LogErrorf("Unable to inject an ApplicationLogger into component %s because field %s is not of the expected type logger.Logger", component.Name, expectedApplicationLoggerFieldName)
 	}
 
 }

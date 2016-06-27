@@ -71,7 +71,7 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 	expandedPaths, err := config.ExpandToFiles(i.splitConfigPaths(configPath))
 
 	if err != nil {
-		i.logger.LogFatal("Unable to load specified config files: " + err.Error())
+		i.logger.LogFatalf("Unable to load specified config files: %s", err.Error())
 		return nil
 	}
 
@@ -122,7 +122,7 @@ func (i *Initiator) builtInConfigPaths() []string {
 	files, err := config.FindConfigFilesInDir(configFolder)
 
 	if err != nil {
-		i.logger.LogFatal("Unable to load config from folder " + configFolder + " " + err.Error())
+		i.logger.LogFatalf("Unable to load config from folder %s: %s", configFolder, err.Error())
 	}
 
 	return files

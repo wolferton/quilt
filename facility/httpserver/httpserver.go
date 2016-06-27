@@ -39,8 +39,7 @@ func (qhs *QuiltHttpServer) mapHandler(endPoint *HttpEndPoint) {
 		compiledRegex, regexError := regexp.Compile(pattern)
 
 		if regexError != nil {
-			errorMessage := fmt.Sprintf("Unable to compile regular expression from pattern %s: %s", pattern, regexError.Error())
-			qhs.Logger.LogError(errorMessage)
+			qhs.Logger.LogErrorf("Unable to compile regular expression from pattern %s: %s", pattern, regexError.Error())
 		}
 
 		handlerPattern := HandlerPattern{handler, compiledRegex}
@@ -60,13 +59,11 @@ func (qhs *QuiltHttpServer) mapHandler(endPoint *HttpEndPoint) {
 
 func (qhs *QuiltHttpServer) StartComponent() {
 
-	fmt.Println("starting HTTP")
-
 	qhs.methodsToHandlerPatterns = make(map[string][]*HandlerPattern)
 
 	endpoints := qhs.componentContainer.FindByType("*httpserver.HttpEndPoint")
 
-	//log.Printf("Found %d HTTP handlers in container", len(endpoints))
+	qhs.Logger.LogDebugf("Found %d HTTP handlers in container", len(endpoints))
 
 	for _, endpointInterface := range endpoints {
 
@@ -75,8 +72,7 @@ func (qhs *QuiltHttpServer) StartComponent() {
 
 	}
 
-	startMessage := fmt.Sprintf("Starting HTTP server listening on %d\n", qhs.Config.Port)
-	qhs.Logger.LogInfo(startMessage)
+	qhs.Logger.LogInfof("Starting HTTP server listening on %d\n", qhs.Config.Port)
 
 	http.Handle("/", http.HandlerFunc(qhs.handleAll))
 
@@ -86,9 +82,6 @@ func (qhs *QuiltHttpServer) StartComponent() {
 
 	qhs.Logger.LogInfo("HTTP server started")
 
-	//if err != nil {
-	//log.Fatal("ListenAndServe:", err)
-	//}
 }
 
 func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request *http.Request) {

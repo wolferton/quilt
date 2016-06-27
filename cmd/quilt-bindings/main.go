@@ -100,7 +100,7 @@ func (cbc *CreateBindingsCommand) configureLogging() {
 
 func (cbc *CreateBindingsCommand) writeBindingsSource(outPath string, configAccessor *config.ConfigAccessor) {
 
-	cbc.logger.LogInfo("Writing binding file " + outPath)
+	cbc.logger.LogInfof("Writing binding file %s", outPath)
 
 	os.MkdirAll(path.Dir(outPath), 0777)
 	file, err := os.Create(outPath)
@@ -146,7 +146,7 @@ func (cbc *CreateBindingsCommand) writeBindingsSource(outPath string, configAcce
 				case config.JsonString:
 					cbc.writeStringValue(writer, instanceVariableName, fieldName, fieldContents.(string), componentProtoName)
 				case config.JsonUnknown:
-					cbc.logger.LogError("Unknown JSON type for field " + fieldName + " on component " + name)
+					cbc.logger.LogErrorf("Unknown JSON type for field %s on component %s", fieldName, name)
 				}
 
 			}

@@ -75,7 +75,7 @@ func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*Pr
 
 		for fieldName, depName := range proto.Dependencies {
 
-			fl.LogTrace(proto.Component.Name + " needs " + depName)
+			fl.LogTracef("%s needs %s", proto.Component.Name, depName)
 
 			requiredComponent := cc.allComponents[depName]
 
@@ -91,7 +91,7 @@ func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*Pr
 		}
 
 		for fieldName, configPath := range proto.ConfigPromises {
-			fl.LogTrace(fieldName + " needs " + configPath)
+			fl.LogTracef("%s needs %s", fieldName, configPath)
 
 			cc.configInjector.PopulateFieldFromJsonPath(fieldName, configPath, proto.Component.Instance)
 
@@ -120,7 +120,7 @@ func (cc *ComponentContainer) captureDecorator(component *Component, decorators 
 	decorator, isDecorator := component.Instance.(ComponentDecorator)
 
 	if isDecorator {
-		cc.logger.LogTrace("Found decorator " + component.Name)
+		cc.logger.LogTracef("Found decorator %s", component.Name)
 		return append(decorators, decorator)
 	} else {
 		return decorators
@@ -136,7 +136,7 @@ func (cc *ComponentContainer) mapComponentToType(component *Component) {
 	componentType := reflect.TypeOf(component.Instance)
 	typeName := componentType.String()
 
-	cc.logger.LogTrace("Storing component " + component.Name + " of type " + componentType.String())
+	cc.logger.LogTracef("Storing component %s of type %s", component.Name, componentType.String())
 
 	componentsOfSameType := cc.componentsByType[typeName]
 

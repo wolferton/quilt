@@ -84,7 +84,7 @@ func (qm *QueryManager) StartComponent() {
 		qm.tokenisedTemplates = qm.parseQueryFiles(queryFiles)
 		fl.LogDebugf("Started QueryManager with %d queries", len(qm.tokenisedTemplates))
 	} else {
-		fl.LogFatal("Unable to start QueryManager due to problem loading query files: " + err.Error())
+		fl.LogFatalf("Unable to start QueryManager due to problem loading query files: %s", err.Error())
 	}
 
 }
@@ -101,7 +101,7 @@ func (qm *QueryManager) parseQueryFiles(files []string) map[string]*QueryTemplat
 		file, err := os.Open(filePath)
 
 		if err != nil {
-			fl.LogError("Unable to open " + filePath + " for parsing: " + err.Error())
+			fl.LogErrorf("Unable to open %s for parsing: %s", filePath, err.Error())
 			continue
 		}
 

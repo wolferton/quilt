@@ -19,7 +19,7 @@ func (jm *JsonMerger) LoadAndMergeConfig(files []string) map[string]interface{} 
 
 	for index, fileName := range files {
 
-		jm.Logger.LogTrace("Reading " + fileName)
+		jm.Logger.LogTracef("Reading %s", fileName)
 
 		jsonData, err := ioutil.ReadFile(fileName)
 		jm.check(err)
@@ -56,7 +56,7 @@ func (jm *JsonMerger) merge(base, additional map[string]interface{}) map[string]
 				base[key] = value
 			}
 		} else {
-			jm.Logger.LogTrace("Adding " + key)
+			jm.Logger.LogTracef("Adding %s", key)
 
 			base[key] = value
 		}

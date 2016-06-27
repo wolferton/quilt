@@ -117,7 +117,7 @@ func (ci *ConfigInjector) PopulateFieldFromJsonPath(fieldName string, path strin
 	case reflect.Bool:
 		targetField.SetBool(ca.BoolValue(path))
 	default:
-		ci.FrameworkLogger.LogError("Unable to use value at path " + path + " as target field " + fieldName + " is not a suppported type")
+		ci.FrameworkLogger.LogErrorf("Unable to use value at path %s as target field %s is not a suppported type", path, fieldName)
 	}
 
 }
@@ -144,7 +144,7 @@ func (ci *ConfigInjector) PopulateObjectFromJsonPath(path string, target interfa
 		}
 
 	} else {
-		ci.FrameworkLogger.LogError("Trying to populate an object from a JSON object, but the base path " + path + " does not exist")
+		ci.FrameworkLogger.LogErrorf("Trying to populate an object from a JSON object, but the base path %s does not exist", path)
 	}
 
 }
