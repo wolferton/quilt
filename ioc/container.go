@@ -19,6 +19,10 @@ type ComponentContainer struct {
 	configInjector   *config.ConfigInjector
 }
 
+func (cc *ComponentContainer) AllComponents() map[string]*Component {
+	return cc.allComponents
+}
+
 func (cc *ComponentContainer) FindByType(typeName string) []interface{} {
 	return cc.componentsByType[typeName]
 }
@@ -87,11 +91,18 @@ func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*Pr
 			requiredInstance := requiredComponent.Instance
 
 			targetReflect := reflect.ValueOf(proto.Component.Instance).Elem()
+
+			defer func() {
+				if r := recover(); r != nil {
+					fl.LogFatalf("Problem setting %s.%s: %s ", proto.Component.Name, fieldName, r)
+				}
+			}()
+
 			targetReflect.FieldByName(fieldName).Set(reflect.ValueOf(requiredInstance))
 		}
 
 		for fieldName, configPath := range proto.ConfigPromises {
-			fl.LogTracef("%s needs %s", fieldName, configPath)
+			fl.LogTracef("%s needs %s", proto.Component.Name, fieldName, configPath)
 
 			cc.configInjector.PopulateFieldFromJsonPath(fieldName, configPath, proto.Component.Instance)
 

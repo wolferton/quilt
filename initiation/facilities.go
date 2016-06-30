@@ -16,6 +16,9 @@ const applicationLoggingDecoratorName = "quiltApplicationLoggingDecorator"
 const httpServerComponentName = "quiltHttpServer"
 const queryManagerComponentName = "quiltQueryManager"
 const dbAccessorComponentName = "quiltDatabaseAccessor"
+const jsonResponseWriterComponentName = "quiltJsonResponseWriter"
+const jsonUnmarshallerComponentName = "quiltJsonUnmarshaller"
+const jsonErrorResponseWriterComponentName = "quiltJsonErrorResponseWriter"
 
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
@@ -109,6 +112,34 @@ func (fi *FacilitiesInitialisor) InitisaliseDatabaseAccessor(protoComponents []*
 
 		proto.AddDependency("Provider", accessor.DatabaseProviderComponentName)
 		proto.AddDependency("QueryManager", queryManagerComponentName)
+
+		return append(protoComponents, proto)
+	}
+}
+
+func (fi *FacilitiesInitialisor) InitialiseJsonHttp(protoComponents []*ioc.ProtoComponent) []*ioc.ProtoComponent {
+	if !fi.ConfigAccessor.BoolValue("facilities.jsonHttp.enabled") {
+		return protoComponents
+	} else {
+
+		responseWriter := new(httpserver.DefaultJsonResponseWriter)
+		responseWriter.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(jsonResponseWriterComponentName)
+
+		proto := ioc.CreateProtoComponent(responseWriter, jsonResponseWriterComponentName)
+
+		protoComponents := append(protoComponents, proto)
+
+		responseErrorWriter := new(httpserver.DefaultJsonErrorResponseWriter)
+		responseErrorWriter.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(jsonErrorResponseWriterComponentName)
+
+		proto = ioc.CreateProtoComponent(responseErrorWriter, jsonErrorResponseWriterComponentName)
+
+		protoComponents = append(protoComponents, proto)
+
+		jsonUnmarshaller := new(httpserver.DefaultJsonUnmarshaller)
+		jsonUnmarshaller.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(jsonUnmarshallerComponentName)
+
+		proto = ioc.CreateProtoComponent(jsonUnmarshaller, jsonUnmarshallerComponentName)
 
 		return append(protoComponents, proto)
 	}

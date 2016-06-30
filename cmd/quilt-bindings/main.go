@@ -181,6 +181,8 @@ func (cbc *CreateBindingsCommand) writeStringValue(writer *bufio.Writer, instanc
 			writer.WriteString(instruction)
 			writer.WriteString("\")\n")
 
+			return
+
 		} else if prefix == confPrefix || prefix == confAlias {
 
 			writer.WriteString("\t")
@@ -190,10 +192,18 @@ func (cbc *CreateBindingsCommand) writeStringValue(writer *bufio.Writer, instanc
 			writer.WriteString("\", \"")
 			writer.WriteString(instruction)
 			writer.WriteString("\")\n")
-		}
 
+			return
+		}
 	}
 
+	writer.WriteString("\t")
+	writer.WriteString(instanceName)
+	writer.WriteString(".")
+	writer.WriteString(fieldName)
+	writer.WriteString(" = \"")
+	writer.WriteString(fieldContents)
+	writer.WriteString("\"\n")
 }
 
 func (cbc *CreateBindingsCommand) writeMapValue(writer *bufio.Writer, instanceName string, fieldName string, fieldContents map[string]interface{}) {

@@ -14,44 +14,45 @@ const httpListenPortPath = "listenPort"
 const httpContentTypePath = "contentType"
 const httpEncodingPath = "encoding"
 
-type HandlerPattern struct {
-	Handler http.Handler
-	Pattern *regexp.Regexp
+type RegisteredProvider struct {
+	Provider HttpEndpointProvider
+	Pattern  *regexp.Regexp
 }
 
 type QuiltHttpServer struct {
-	Config                   HttpServerConfig
-	methodsToHandlerPatterns map[string][]*HandlerPattern
-	componentContainer       *ioc.ComponentContainer
-	Logger                   logger.Logger
+	Config                      HttpServerConfig
+	registeredProvidersByMethod map[string][]*RegisteredProvider
+	componentContainer          *ioc.ComponentContainer
+	Logger                      logger.Logger
 }
 
 func (qhs *QuiltHttpServer) Container(container *ioc.ComponentContainer) {
 	qhs.componentContainer = container
 }
 
-func (qhs *QuiltHttpServer) mapHandler(endPoint *HttpEndPoint) {
+func (qhs *QuiltHttpServer) registerProvider(endPointProvider HttpEndpointProvider) {
 
-	handler := endPoint.Handler
+	for _, method := range endPointProvider.SupportedHttpMethods() {
 
-	for method, pattern := range endPoint.MethodPatterns {
-
+		pattern := endPointProvider.RegexPattern()
 		compiledRegex, regexError := regexp.Compile(pattern)
 
 		if regexError != nil {
 			qhs.Logger.LogErrorf("Unable to compile regular expression from pattern %s: %s", pattern, regexError.Error())
 		}
 
-		handlerPattern := HandlerPattern{handler, compiledRegex}
+		qhs.Logger.LogTracef("Registering %s %s", pattern, method)
 
-		sameMethod := qhs.methodsToHandlerPatterns[method]
+		rp := RegisteredProvider{endPointProvider, compiledRegex}
 
-		if sameMethod == nil {
-			sameMethod = make([]*HandlerPattern, 1)
-			sameMethod[0] = &handlerPattern
-			qhs.methodsToHandlerPatterns[method] = sameMethod
+		providersForMethod := qhs.registeredProvidersByMethod[method]
+
+		if providersForMethod == nil {
+			providersForMethod = make([]*RegisteredProvider, 1)
+			providersForMethod[0] = &rp
+			qhs.registeredProvidersByMethod[method] = providersForMethod
 		} else {
-			qhs.methodsToHandlerPatterns[method] = append(sameMethod, &handlerPattern)
+			qhs.registeredProvidersByMethod[method] = append(providersForMethod, &rp)
 		}
 	}
 
@@ -59,16 +60,17 @@ func (qhs *QuiltHttpServer) mapHandler(endPoint *HttpEndPoint) {
 
 func (qhs *QuiltHttpServer) StartComponent() {
 
-	qhs.methodsToHandlerPatterns = make(map[string][]*HandlerPattern)
+	qhs.registeredProvidersByMethod = make(map[string][]*RegisteredProvider)
 
-	endpoints := qhs.componentContainer.FindByType("*httpserver.HttpEndPoint")
+	for name, component := range qhs.componentContainer.AllComponents() {
+		provider, found := component.Instance.(HttpEndpointProvider)
 
-	qhs.Logger.LogDebugf("Found %d HTTP handlers in container", len(endpoints))
+		if found {
+			qhs.Logger.LogDebugf("Found HttpEndpointProvider %s", name)
 
-	for _, endpointInterface := range endpoints {
+			qhs.registerProvider(provider)
 
-		endpoint := endpointInterface.(*HttpEndPoint)
-		qhs.mapHandler(endpoint)
+		}
 
 	}
 
@@ -89,19 +91,25 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 	contentType := fmt.Sprintf("%s; charset=%s", h.Config.ContentType, h.Config.Encoding)
 	responseWriter.Header().Set("Content-Type", contentType)
 
-	methodHandlers := h.methodsToHandlerPatterns[request.Method]
+	providersByMethod := h.registeredProvidersByMethod[request.Method]
 
-	for _, handlerPattern := range methodHandlers {
+	path := request.URL.Path
+
+	h.Logger.LogTracef("Finding provider to handle %s %s from %d providers", path, request.Method, len(providersByMethod))
+
+	for _, handlerPattern := range providersByMethod {
 
 		pattern := handlerPattern.Pattern
 
-		if pattern.MatchString(request.URL.Path) {
-			handlerPattern.Handler.ServeHTTP(responseWriter, request)
+		h.Logger.LogTracef("Testing %s", pattern.String())
+
+		if pattern.MatchString(path) {
+			h.Logger.LogTracef("Matches %s", pattern.String())
+			handlerPattern.Provider.ServeHTTP(responseWriter, request)
 		}
 
 	}
 
-	//responseWriter.WriteHeader(404)
 }
 
 type HttpServerConfig struct {
