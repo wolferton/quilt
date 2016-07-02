@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"encoding/json"
 	"github.com/wolferton/quilt/facility/logger"
 	"net/http"
 )
@@ -19,7 +20,8 @@ type JsonHandler struct {
 
 //HttpEndpointProvider
 func (jh *JsonHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	jsonReq, err := jh.Unmarshaller.Unmarshall(req)
+	logic := jh.Logic
+	jsonReq, err := jh.Unmarshaller.Unmarshall(req, logic)
 
 	if err != nil {
 		jh.unmarshallError(err, w)
@@ -27,8 +29,6 @@ func (jh *JsonHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var errors ServiceErrors
-
-	logic := jh.Logic
 
 	logic.Validate(&errors, jsonReq)
 
@@ -38,7 +38,12 @@ func (jh *JsonHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	jsonRes := logic.Process(jsonReq)
-	jh.writeResponse(jsonRes, w)
+
+	err = jh.writeResponse(jsonRes, w)
+
+	if err != nil {
+		jh.QuiltApplicationLogger.LogErrorf("Problem writing a HTTP response to %s after processing was complete: %s ", req.RequestURI, err)
+	}
 
 }
 
@@ -64,16 +69,18 @@ func (jh *JsonHandler) errorResponse(errors *ServiceErrors, w http.ResponseWrite
 
 }
 
-func (jh *JsonHandler) writeResponse(res *JsonResponse, w http.ResponseWriter) {
-
-	jh.QuiltApplicationLogger.LogTrace("Write")
+func (jh *JsonHandler) writeResponse(res *JsonResponse, w http.ResponseWriter) error {
 
 	errors := res.Errors
 
 	if errors.HasErrors() {
 		jh.errorResponse(errors, w)
-		return
+		return nil
 	}
+
+	err := jh.ResponseWriter.Write(res, w)
+
+	return err
 }
 
 func NewJsonResponse() *JsonResponse {
@@ -85,6 +92,7 @@ func NewJsonResponse() *JsonResponse {
 type JsonRequest struct {
 	PathParameters map[string]string
 	HttpMethod     string
+	RequestBody    interface{}
 }
 
 type JsonResponse struct {
@@ -98,17 +106,35 @@ type JsonRequestLogic interface {
 	Process(request *JsonRequest) *JsonResponse
 }
 
+type JsonUnmarshallTarget interface {
+	UnmarshallTarget() interface{}
+}
+
 type JsonUnmarshaller interface {
-	Unmarshall(req *http.Request) (*JsonRequest, error)
+	Unmarshall(req *http.Request, logic interface{}) (*JsonRequest, error)
 }
 
 type DefaultJsonUnmarshaller struct {
 	FrameworkLogger logger.Logger
 }
 
-func (jdu *DefaultJsonUnmarshaller) Unmarshall(httpReq *http.Request) (*JsonRequest, error) {
+func (jdu *DefaultJsonUnmarshaller) Unmarshall(httpReq *http.Request, logic interface{}) (*JsonRequest, error) {
 
 	var jsonReq JsonRequest
+
+	targetSource, found := logic.(JsonUnmarshallTarget)
+
+	if found {
+		target := targetSource.UnmarshallTarget()
+		err := json.NewDecoder(httpReq.Body).Decode(&target)
+
+		if err != nil {
+			return nil, err
+		}
+
+		jsonReq.RequestBody = target
+
+	}
 
 	jsonReq.HttpMethod = httpReq.Method
 
@@ -117,15 +143,23 @@ func (jdu *DefaultJsonUnmarshaller) Unmarshall(httpReq *http.Request) (*JsonRequ
 }
 
 type JsonResponseWriter interface {
-	Write(res *JsonResponse, request *JsonRequest, w http.ResponseWriter)
+	Write(res *JsonResponse, w http.ResponseWriter) error
 }
 
 type DefaultJsonResponseWriter struct {
 	FrameworkLogger logger.Logger
 }
 
-func (djrw *DefaultJsonResponseWriter) Write(res *JsonResponse, request *JsonRequest, w http.ResponseWriter) {
-	djrw.FrameworkLogger.LogInfo("Writing response")
+func (djrw *DefaultJsonResponseWriter) Write(res *JsonResponse, w http.ResponseWriter) error {
+	data, err := json.Marshal(res.Body)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(data)
+
+	return err
 }
 
 type JsonErrorResponseWriter interface {
