@@ -16,12 +16,14 @@ type JsonHandler struct {
 	ResponseWriter         JsonResponseWriter
 	ErrorResponseWriter    JsonErrorResponseWriter
 	QuiltApplicationLogger logger.Logger
+	StatusDeterminer       HttpStatusCodeDeterminer
 }
 
 //HttpEndpointProvider
 func (jh *JsonHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	logic := jh.Logic
 	jsonReq, err := jh.Unmarshaller.Unmarshall(req, logic)
+	l := jh.QuiltApplicationLogger
 
 	if err != nil {
 		jh.unmarshallError(err, w)
@@ -30,19 +32,27 @@ func (jh *JsonHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	var errors ServiceErrors
 
-	logic.Validate(&errors, jsonReq)
+	validator, found := logic.(JsonRequestValidator)
 
-	if errors.HasErrors() {
-		jh.errorResponse(&errors, w)
-		return
+	if found {
+		validator.Validate(&errors, jsonReq)
 	}
 
-	jsonRes := logic.Process(jsonReq)
+	if errors.HasErrors() {
+		err = jh.errorResponse(&errors, w)
 
-	err = jh.writeResponse(jsonRes, w)
+		if err != nil {
+			l.LogErrorf("Problem writing an HTTP response for request after failed validation %s: %s", req.URL, err)
+		}
+	} else {
 
-	if err != nil {
-		jh.QuiltApplicationLogger.LogErrorf("Problem writing a HTTP response to %s after processing was complete: %s ", req.RequestURI, err)
+		jsonRes := logic.Process(jsonReq)
+
+		err = jh.writeResponse(jsonRes, w)
+
+		if err != nil {
+			l.LogErrorf("Problem writing an HTTP response for request the request was processed %s: %s", req.URL, err)
+		}
 	}
 
 }
@@ -62,10 +72,18 @@ func (jh *JsonHandler) RegexPattern() string {
 }
 
 func (jh *JsonHandler) unmarshallError(err error, w http.ResponseWriter) {
+	jh.QuiltApplicationLogger.LogErrorf("Error unmarshalling request body %s", err)
 
 }
 
-func (jh *JsonHandler) errorResponse(errors *ServiceErrors, w http.ResponseWriter) {
+func (jh *JsonHandler) errorResponse(errors *ServiceErrors, w http.ResponseWriter) error {
+
+	status := jh.StatusDeterminer.DetermineCodeFromErrors(errors)
+
+	w.WriteHeader(status)
+	err := jh.ErrorResponseWriter.Write(errors, w)
+
+	return err
 
 }
 
@@ -74,12 +92,14 @@ func (jh *JsonHandler) writeResponse(res *JsonResponse, w http.ResponseWriter) e
 	errors := res.Errors
 
 	if errors.HasErrors() {
-		jh.errorResponse(errors, w)
-		return nil
+		err := jh.errorResponse(errors, w)
+		return err
 	}
 
-	err := jh.ResponseWriter.Write(res, w)
+	status := jh.StatusDeterminer.DetermineCode(res)
+	w.WriteHeader(status)
 
+	err := jh.ResponseWriter.Write(res, w)
 	return err
 }
 
@@ -101,9 +121,68 @@ type JsonResponse struct {
 	Errors     *ServiceErrors
 }
 
+type HttpStatusCodeDeterminer interface {
+	DetermineCode(response *JsonResponse) int
+	DetermineCodeFromErrors(errors *ServiceErrors) int
+}
+
+type DefaultHttpStatusCodeDeterminer struct {
+}
+
+func (dhscd *DefaultHttpStatusCodeDeterminer) DetermineCode(response *JsonResponse) int {
+	if response.HttpStatus != 0 {
+		return response.HttpStatus
+
+	} else {
+		return http.StatusOK
+	}
+}
+
+func (dhscd *DefaultHttpStatusCodeDeterminer) DetermineCodeFromErrors(errors *ServiceErrors) int {
+
+	if errors.HttpStatus != 0 {
+		return errors.HttpStatus
+	}
+
+	sCount := 0
+	cCount := 0
+	lCount := 0
+
+	for _, error := range errors.Errors {
+
+		switch error.Category {
+		case Unexpected:
+			return http.StatusInternalServerError
+		case Security:
+			sCount += 1
+		case Logic:
+			lCount += 1
+		case Client:
+			cCount += 1
+		}
+	}
+
+	if sCount > 0 {
+		return http.StatusUnauthorized
+	}
+
+	if cCount > 0 {
+		return http.StatusBadRequest
+	}
+
+	if lCount > 0 {
+		return http.StatusConflict
+	}
+
+	return http.StatusOK
+}
+
 type JsonRequestLogic interface {
-	Validate(errors *ServiceErrors, request *JsonRequest)
 	Process(request *JsonRequest) *JsonResponse
+}
+
+type JsonRequestValidator interface {
+	Validate(errors *ServiceErrors, request *JsonRequest)
 }
 
 type JsonUnmarshallTarget interface {
@@ -151,7 +230,10 @@ type DefaultJsonResponseWriter struct {
 }
 
 func (djrw *DefaultJsonResponseWriter) Write(res *JsonResponse, w http.ResponseWriter) error {
-	data, err := json.Marshal(res.Body)
+
+	wrapper := wrapJsonResponse(nil, res.Body)
+
+	data, err := json.Marshal(wrapper)
 
 	if err != nil {
 		return err
@@ -163,13 +245,65 @@ func (djrw *DefaultJsonResponseWriter) Write(res *JsonResponse, w http.ResponseW
 }
 
 type JsonErrorResponseWriter interface {
-	Write(errors *ServiceErrors, request *JsonRequest, w http.ResponseWriter)
+	Write(errors *ServiceErrors, w http.ResponseWriter) error
 }
 
 type DefaultJsonErrorResponseWriter struct {
 	FrameworkLogger logger.Logger
 }
 
-func (djerw *DefaultJsonErrorResponseWriter) Write(errors *ServiceErrors, request *JsonRequest, w http.ResponseWriter) {
-	djerw.FrameworkLogger.LogInfo("Writing error response")
+func (djerw *DefaultJsonErrorResponseWriter) Write(errors *ServiceErrors, w http.ResponseWriter) error {
+
+	wrapper := wrapJsonResponse(djerw.formatErrors(errors), nil)
+
+	data, err := json.Marshal(wrapper)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write(data)
+
+	return err
+}
+
+func (djerw *DefaultJsonErrorResponseWriter) formatErrors(errors *ServiceErrors) interface{} {
+
+	f := make(map[string]string)
+
+	for _, error := range errors.Errors {
+
+		var c string
+
+		switch error.Category {
+		default:
+			c = "?"
+		case Unexpected:
+			c = "U"
+		case Security:
+			c = "S"
+		case Logic:
+			c = "L"
+		case Client:
+			c = "C"
+		}
+
+		f[c+"-"+error.Label] = error.Message
+	}
+
+	return f
+}
+
+func wrapJsonResponse(errors interface{}, body interface{}) interface{} {
+	f := make(map[string]interface{})
+
+	if errors != nil {
+		f["Errors"] = errors
+	}
+
+	if body != nil {
+		f["Response"] = body
+	}
+
+	return f
 }

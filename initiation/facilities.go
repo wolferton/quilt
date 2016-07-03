@@ -19,6 +19,7 @@ const dbAccessorComponentName = "quiltDatabaseAccessor"
 const jsonResponseWriterComponentName = "quiltJsonResponseWriter"
 const jsonUnmarshallerComponentName = "quiltJsonUnmarshaller"
 const jsonErrorResponseWriterComponentName = "quiltJsonErrorResponseWriter"
+const wsHttpStatusDeterminerComponentName = "quiltHttpStatusDeterminer"
 
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
@@ -133,6 +134,12 @@ func (fi *FacilitiesInitialisor) InitialiseJsonHttp(protoComponents []*ioc.Proto
 		responseErrorWriter.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(jsonErrorResponseWriterComponentName)
 
 		proto = ioc.CreateProtoComponent(responseErrorWriter, jsonErrorResponseWriterComponentName)
+
+		protoComponents = append(protoComponents, proto)
+
+		statusDeterminer := new(httpserver.DefaultHttpStatusCodeDeterminer)
+
+		proto = ioc.CreateProtoComponent(statusDeterminer, wsHttpStatusDeterminerComponentName)
 
 		protoComponents = append(protoComponents, proto)
 
