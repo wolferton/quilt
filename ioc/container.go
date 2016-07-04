@@ -134,7 +134,6 @@ func (cc *ComponentContainer) captureDecorator(component *Component, decorators 
 		cc.logger.LogTracef("Found decorator %s", component.Name)
 		return append(decorators, decorator)
 	} else {
-		cc.logger.LogTracef("Not decorator %s", component.Name)
 		return decorators
 	}
 }

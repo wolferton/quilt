@@ -34,7 +34,8 @@ func InitialiseJsonHttp(logManager *logger.ComponentLoggerManager, config *confi
 		jsonUnmarshaller.FrameworkLogger = logManager.CreateLogger(jsonUnmarshallerComponentName)
 		jsonUnmarshallerProto := ioc.CreateProtoComponent(jsonUnmarshaller, jsonUnmarshallerComponentName)
 
-		decorator := JsonWsHandlerDecorator{responseWriter, responseErrorWriter, statusDeterminer, jsonUnmarshaller}
+		decoratorLogger := logManager.CreateLogger(jsonHandlerDecoratorComponentName)
+		decorator := JsonWsHandlerDecorator{decoratorLogger, responseWriter, responseErrorWriter, statusDeterminer, jsonUnmarshaller}
 		decoratorProto := ioc.CreateProtoComponent(&decorator, jsonHandlerDecoratorComponentName)
 
 		return []*ioc.ProtoComponent{responseWriterProto, responseErrorWriterProto, statusDeterminerProto, jsonUnmarshallerProto, decoratorProto}
@@ -42,6 +43,7 @@ func InitialiseJsonHttp(logManager *logger.ComponentLoggerManager, config *confi
 }
 
 type JsonWsHandlerDecorator struct {
+	FrameworkLogger      logger.Logger
 	ResponseWriter       ws.WsResponseWriter
 	ErrorResponseWriter  ws.WsErrorResponseWriter
 	StatusCodeDeterminer ws.HttpStatusCodeDeterminer
@@ -51,6 +53,7 @@ type JsonWsHandlerDecorator struct {
 func (jwhd *JsonWsHandlerDecorator) OfInterest(component *ioc.Component) bool {
 	switch component.Instance.(type) {
 	default:
+		jwhd.FrameworkLogger.LogTracef("No interest %s", component.Name)
 		return false
 	case *ws.WsHandler:
 		return true
@@ -59,6 +62,8 @@ func (jwhd *JsonWsHandlerDecorator) OfInterest(component *ioc.Component) bool {
 
 func (jwhd *JsonWsHandlerDecorator) DecorateComponent(component *ioc.Component, container *ioc.ComponentContainer) {
 	h := component.Instance.(*ws.WsHandler)
+	l := jwhd.FrameworkLogger
+	l.LogTracef("Decorating component %s", component.Name)
 
 	if h.StatusDeterminer == nil {
 		h.StatusDeterminer = jwhd.StatusCodeDeterminer
@@ -73,6 +78,7 @@ func (jwhd *JsonWsHandlerDecorator) DecorateComponent(component *ioc.Component, 
 	}
 
 	if h.Unmarshaller == nil {
+		l.LogTracef("%s needs Unmarshaller", component.Name)
 		h.Unmarshaller = jwhd.Unmarshaller
 	}
 

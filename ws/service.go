@@ -21,7 +21,7 @@ type WsResponse struct {
 }
 
 type WsRequestProcessor interface {
-	Process(request *WsRequest) *WsResponse
+	Process(request *WsRequest, response *WsResponse)
 }
 
 type WsRequestValidator interface {

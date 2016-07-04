@@ -45,9 +45,10 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 
-		jsonRes := logic.Process(jsonReq)
+		wsRes := NewWsResponse()
+		logic.Process(jsonReq, wsRes)
 
-		err = wh.writeResponse(jsonRes, w)
+		err = wh.writeResponse(wsRes, w)
 
 		if err != nil {
 			l.LogErrorf("Problem writing an HTTP response for request the request was processed %s: %s", req.URL, err)
