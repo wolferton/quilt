@@ -72,7 +72,7 @@ func (qm *QueryManager) SubstituteMap(queryId string, params map[string]interfac
 
 }
 
-func (qm *QueryManager) StartComponent() {
+func (qm *QueryManager) StartComponent() error {
 	fl := qm.FrameworkLogger
 	fl.LogDebug("Starting QueryManager")
 	fl.LogDebug(qm.TemplateLocation)
@@ -83,8 +83,12 @@ func (qm *QueryManager) StartComponent() {
 
 		qm.tokenisedTemplates = qm.parseQueryFiles(queryFiles)
 		fl.LogDebugf("Started QueryManager with %d queries", len(qm.tokenisedTemplates))
+
+		return nil
+
 	} else {
-		fl.LogFatalf("Unable to start QueryManager due to problem loading query files: %s", err.Error())
+		message := fmt.Sprintf("Unable to start QueryManager due to problem loading query files: %s", err.Error())
+		return errors.New(message)
 	}
 
 }

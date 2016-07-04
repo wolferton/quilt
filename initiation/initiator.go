@@ -23,6 +23,8 @@ type Initiator struct {
 
 func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
+	start := time.Now()
+
 	if config.QuiltHome() == "" {
 		fmt.Println("QUILT_HOME environment variable not set")
 		os.Exit(-1)
@@ -59,13 +61,18 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
 
 	i.logger.LogInfo("Starting components")
-	container.StartComponents()
-	i.logger.LogInfo("Ready")
+	err := container.StartComponents()
 
-	for {
-		time.Sleep(100000000000)
+	if err != nil {
+		i.logger.LogFatal(err.Error())
+	} else {
+		elapsed := time.Since(start)
+		i.logger.LogInfof("Ready (startup time %s)", elapsed)
+
+		for {
+			time.Sleep(100000000000)
+		}
 	}
-
 }
 
 func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingManager *logger.ComponentLoggerManager) *config.ConfigAccessor {

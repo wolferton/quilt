@@ -58,7 +58,7 @@ func (qhs *QuiltHttpServer) registerProvider(endPointProvider HttpEndpointProvid
 
 }
 
-func (qhs *QuiltHttpServer) StartComponent() {
+func (qhs *QuiltHttpServer) StartComponent() error {
 
 	qhs.registeredProvidersByMethod = make(map[string][]*RegisteredProvider)
 
@@ -74,7 +74,7 @@ func (qhs *QuiltHttpServer) StartComponent() {
 
 	}
 
-	qhs.Logger.LogInfof("Starting HTTP server listening on %d\n", qhs.Config.Port)
+	qhs.Logger.LogInfof("Starting HTTP server listening on %d", qhs.Config.Port)
 
 	http.Handle("/", http.HandlerFunc(qhs.handleAll))
 
@@ -83,6 +83,8 @@ func (qhs *QuiltHttpServer) StartComponent() {
 	go http.ListenAndServe(listenAddress, nil)
 
 	qhs.Logger.LogInfo("HTTP server started")
+
+	return nil
 
 }
 

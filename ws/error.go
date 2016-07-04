@@ -28,6 +28,10 @@ func (se *ServiceErrors) AddError(category ServiceErrorCategory, label string, m
 
 }
 
+func (se *ServiceErrors) AddPredefinedError(error CategorisedError) {
+	se.Errors = append(se.Errors, error)
+}
+
 func (se *ServiceErrors) HasErrors() bool {
 	return len(se.Errors) != 0
 }

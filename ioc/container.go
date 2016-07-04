@@ -27,16 +27,24 @@ func (cc *ComponentContainer) FindByType(typeName string) []interface{} {
 	return cc.componentsByType[typeName]
 }
 
-func (cc *ComponentContainer) StartComponents() {
+func (cc *ComponentContainer) StartComponents() error {
 	for _, component := range cc.allComponents {
 
 		startable, isStartable := component.Instance.(Startable)
 
 		if isStartable {
-			startable.StartComponent()
+			err := startable.StartComponent()
+
+			if err != nil {
+				message := fmt.Sprintf("Unable to start %s: %s", component.Name, err)
+				return errors.New(message)
+			}
+
 		}
 
 	}
+
+	return nil
 }
 
 func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, configAccessor *config.ConfigAccessor) {
