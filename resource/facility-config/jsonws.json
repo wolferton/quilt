@@ -1,6 +1,6 @@
 {
   "facilities":{
-    "jsonHttp":{
+    "jsonWs":{
       "enabled": false
     }
   }

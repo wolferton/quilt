@@ -8,8 +8,6 @@ import (
 	"github.com/wolferton/quilt/facility/querymanager"
 	"github.com/wolferton/quilt/facility/rdbms"
 	"github.com/wolferton/quilt/ioc"
-	"github.com/wolferton/quilt/ws"
-	"github.com/wolferton/quilt/ws/json"
 )
 
 const applicationLoggingManagerComponentName = "quiltApplicationLoggingManager"
@@ -18,10 +16,6 @@ const applicationLoggingDecoratorName = "quiltApplicationLoggingDecorator"
 const httpServerComponentName = "quiltHttpServer"
 const queryManagerComponentName = "quiltQueryManager"
 const dbAccessorComponentName = "quiltDatabaseAccessor"
-const jsonResponseWriterComponentName = "quiltJsonResponseWriter"
-const jsonUnmarshallerComponentName = "quiltJsonUnmarshaller"
-const jsonErrorResponseWriterComponentName = "quiltJsonErrorResponseWriter"
-const wsHttpStatusDeterminerComponentName = "quiltHttpStatusDeterminer"
 
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
@@ -115,40 +109,6 @@ func (fi *FacilitiesInitialisor) InitisaliseDatabaseAccessor(protoComponents []*
 
 		proto.AddDependency("Provider", accessor.DatabaseProviderComponentName)
 		proto.AddDependency("QueryManager", queryManagerComponentName)
-
-		return append(protoComponents, proto)
-	}
-}
-
-func (fi *FacilitiesInitialisor) InitialiseJsonHttp(protoComponents []*ioc.ProtoComponent) []*ioc.ProtoComponent {
-	if !fi.ConfigAccessor.BoolValue("facilities.jsonHttp.enabled") {
-		return protoComponents
-	} else {
-
-		responseWriter := new(json.DefaultJsonResponseWriter)
-		responseWriter.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(jsonResponseWriterComponentName)
-
-		proto := ioc.CreateProtoComponent(responseWriter, jsonResponseWriterComponentName)
-
-		protoComponents := append(protoComponents, proto)
-
-		responseErrorWriter := new(json.DefaultJsonErrorResponseWriter)
-		responseErrorWriter.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(jsonErrorResponseWriterComponentName)
-
-		proto = ioc.CreateProtoComponent(responseErrorWriter, jsonErrorResponseWriterComponentName)
-
-		protoComponents = append(protoComponents, proto)
-
-		statusDeterminer := new(ws.DefaultHttpStatusCodeDeterminer)
-
-		proto = ioc.CreateProtoComponent(statusDeterminer, wsHttpStatusDeterminerComponentName)
-
-		protoComponents = append(protoComponents, proto)
-
-		jsonUnmarshaller := new(json.DefaultJsonUnmarshaller)
-		jsonUnmarshaller.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(jsonUnmarshallerComponentName)
-
-		proto = ioc.CreateProtoComponent(jsonUnmarshaller, jsonUnmarshallerComponentName)
 
 		return append(protoComponents, proto)
 	}
