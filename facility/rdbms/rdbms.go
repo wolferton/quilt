@@ -32,6 +32,22 @@ func (da *DatabaseAccessor) InsertQueryIdParamMap(queryId string, params map[str
 	return result, err
 }
 
+func (da *DatabaseAccessor) InsertQueryIdParamMapReturnedId(queryId string, params map[string]interface{}) (int, error) {
+
+	query, err := da.QueryManager.SubstituteMap(queryId, params)
+
+	if err != nil {
+		return 0, err
+	}
+
+	db, err := da.Provider.Database()
+	var id int
+
+	err = db.QueryRow(query).Scan(&id)
+
+	return id, err
+}
+
 func (da *DatabaseAccessor) SelectQueryIdParamMap(queryId string, params map[string]interface{}) (*sql.Rows, error) {
 	query, err := da.QueryManager.SubstituteMap(queryId, params)
 
