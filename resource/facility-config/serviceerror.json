@@ -2,7 +2,8 @@
   "facilities":{
     "serviceErrorManager":{
       "enabled": false,
-      "errorDefintions": "serviceErrors"
+      "PanicOnMissing": true,
+      "ErrorDefintions": "serviceErrors"
     }
   }
 }
