@@ -6,6 +6,7 @@ import (
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/jsonmerger"
 	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/facility/serviceerror"
 	"github.com/wolferton/quilt/ioc"
 	"github.com/wolferton/quilt/ws/json"
 	"os"
@@ -57,6 +58,7 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 	protoComponents = facilitiesInitialisor.InitisaliseDatabaseAccessor(protoComponents)
 
 	protoComponents = append(protoComponents, json.InitialiseJsonHttp(frameworkLoggingManager, configAccessor)...)
+	protoComponents = append(protoComponents, serviceerror.InitialiseServiceErrorManager(frameworkLoggingManager, configAccessor)...)
 
 	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
 

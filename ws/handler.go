@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"fmt"
 	"github.com/wolferton/quilt/facility/logger"
 	"net/http"
 )
@@ -16,20 +17,33 @@ type WsHandler struct {
 	ErrorResponseWriter    WsErrorResponseWriter
 	QuiltApplicationLogger logger.Logger
 	StatusDeterminer       HttpStatusCodeDeterminer
+	ErrorFinder            ServiceErrorFinder
+	RevealPanicDetails     bool
+}
+
+func (wh *WsHandler) ProvideErrorFinder(finder ServiceErrorFinder) {
+	wh.ErrorFinder = finder
 }
 
 //HttpEndpointProvider
 func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			wh.writePanicResponse(r, w)
+		}
+	}()
+
 	logic := wh.Logic
 	jsonReq, err := wh.Unmarshaller.Unmarshall(req, logic)
-	l := wh.QuiltApplicationLogger
 
 	if err != nil {
-		wh.unmarshallError(err, w)
+		wh.writeUnmarshallError(err, w)
 		return
 	}
 
 	var errors ServiceErrors
+	errors.ErrorFinder = wh.ErrorFinder
 
 	validator, found := logic.(WsRequestValidator)
 
@@ -38,21 +52,11 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if errors.HasErrors() {
-		err = wh.errorResponse(&errors, w)
-
-		if err != nil {
-			l.LogErrorf("Problem writing an HTTP response for request after failed validation %s: %s", req.URL, err)
-		}
+		wh.writeErrorResponse(&errors, w)
 	} else {
 
-		wsRes := NewWsResponse()
-		logic.Process(jsonReq, wsRes)
+		wh.process(jsonReq, w)
 
-		err = wh.writeResponse(wsRes, w)
-
-		if err != nil {
-			l.LogErrorf("Problem writing an HTTP response for request the request was processed %s: %s", req.URL, err)
-		}
 	}
 
 }
@@ -71,34 +75,81 @@ func (wh *WsHandler) RegexPattern() string {
 	return wh.PathMatchPattern
 }
 
-func (wh *WsHandler) unmarshallError(err error, w http.ResponseWriter) {
+func (wh *WsHandler) writeUnmarshallError(err error, w http.ResponseWriter) {
 	wh.QuiltApplicationLogger.LogErrorf("Error unmarshalling request body %s", err)
+
+	var se ServiceErrors
+	se.HttpStatus = http.StatusBadRequest
+
+	message := fmt.Sprintf("There is a problem with the body of the request: %s", err)
+	se.AddError(Client, "UNMARSH", message)
+
+	wh.writeErrorResponse(&se, w)
 
 }
 
-func (wh *WsHandler) errorResponse(errors *ServiceErrors, w http.ResponseWriter) error {
+func (wh *WsHandler) process(jsonReq *WsRequest, w http.ResponseWriter) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			wh.writePanicResponse(r, w)
+		}
+	}()
+
+	wsRes := NewWsResponse(wh.ErrorFinder)
+	wh.Logic.Process(jsonReq, wsRes)
+
+	errors := wsRes.Errors
+
+	if errors.HasErrors() {
+		wh.writeErrorResponse(errors, w)
+
+	} else {
+		status := wh.StatusDeterminer.DetermineCode(wsRes)
+		w.WriteHeader(status)
+	}
+
+	wh.ResponseWriter.Write(wsRes, w)
+}
+
+func (wh *WsHandler) writeErrorResponse(errors *ServiceErrors, w http.ResponseWriter) {
+
+	l := wh.QuiltApplicationLogger
+
+	defer func() {
+		if r := recover(); r != nil {
+			l.LogErrorf("Panic recovered while trying to write a response that was already in error %s", r)
+		}
+	}()
 
 	status := wh.StatusDeterminer.DetermineCodeFromErrors(errors)
 
 	w.WriteHeader(status)
 	err := wh.ErrorResponseWriter.Write(errors, w)
 
-	return err
+	if err != nil {
+		l.LogErrorf("Problem writing an HTTP response that was already in error", err)
+	}
 
 }
 
-func (wh *WsHandler) writeResponse(res *WsResponse, w http.ResponseWriter) error {
+func (wh *WsHandler) writePanicResponse(r interface{}, w http.ResponseWriter) {
 
-	errors := res.Errors
+	var se ServiceErrors
+	se.HttpStatus = http.StatusInternalServerError
 
-	if errors.HasErrors() {
-		err := wh.errorResponse(errors, w)
-		return err
+	var message string
+
+	if wh.RevealPanicDetails {
+		message = fmt.Sprintf("Unhandled error %s", r)
+
+	} else {
+		message = "A unexpected error occured while processing this request."
 	}
 
-	status := wh.StatusDeterminer.DetermineCode(res)
-	w.WriteHeader(status)
+	wh.QuiltApplicationLogger.LogErrorf("Panic recovered but error response served. %s", r)
 
-	err := wh.ResponseWriter.Write(res, w)
-	return err
+	se.AddError(Unexpected, "UNXP", message)
+
+	wh.writeErrorResponse(&se, w)
 }

@@ -74,15 +74,13 @@ func (qhs *QuiltHttpServer) StartComponent() error {
 
 	}
 
-	qhs.Logger.LogInfof("Starting HTTP server listening on %d", qhs.Config.Port)
-
 	http.Handle("/", http.HandlerFunc(qhs.handleAll))
 
 	listenAddress := fmt.Sprintf(":%d", qhs.Config.Port)
 
 	go http.ListenAndServe(listenAddress, nil)
 
-	qhs.Logger.LogInfo("HTTP server started")
+	qhs.Logger.LogInfof("HTTP server started listening on %d", qhs.Config.Port)
 
 	return nil
 

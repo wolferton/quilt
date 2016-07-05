@@ -1,5 +1,7 @@
 package ioc
 
+const FrameworkPrefix = "quilt"
+
 type ProtoComponent struct {
 	Component      *Component
 	Dependencies   map[string]string

@@ -64,7 +64,14 @@ func (c *ConfigAccessor) Float64Value(path string) float64 {
 }
 
 func (c *ConfigAccessor) Array(path string) []interface{} {
-	return c.Value(path).([]interface{})
+
+	value := c.Value(path)
+
+	if value == nil {
+		return nil
+	} else {
+		return c.Value(path).([]interface{})
+	}
 }
 
 func (c *ConfigAccessor) BoolValue(path string) bool {

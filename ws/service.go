@@ -2,9 +2,11 @@ package ws
 
 import "net/http"
 
-func NewWsResponse() *WsResponse {
+func NewWsResponse(errorFinder ServiceErrorFinder) *WsResponse {
 	r := new(WsResponse)
 	r.Errors = new(ServiceErrors)
+	r.Errors.ErrorFinder = errorFinder
+
 	return r
 }
 

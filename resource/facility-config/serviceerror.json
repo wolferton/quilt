@@ -1,0 +1,8 @@
+{
+  "facilities":{
+    "serviceErrorManager":{
+      "enabled": false,
+      "errorDefintions": "serviceErrors"
+    }
+  }
+}
