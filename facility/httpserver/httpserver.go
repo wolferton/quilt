@@ -74,6 +74,10 @@ func (qhs *QuiltHttpServer) StartComponent() error {
 
 	}
 
+	return nil
+}
+
+func (qhs *QuiltHttpServer) AllowAccess() error {
 	http.Handle("/", http.HandlerFunc(qhs.handleAll))
 
 	listenAddress := fmt.Sprintf(":%d", qhs.Config.Port)
@@ -83,7 +87,6 @@ func (qhs *QuiltHttpServer) StartComponent() error {
 	qhs.Logger.LogInfof("HTTP server started listening on %d", qhs.Config.Port)
 
 	return nil
-
 }
 
 func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request *http.Request) {

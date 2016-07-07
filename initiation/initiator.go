@@ -69,13 +69,11 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
 	if err != nil {
 		i.logger.LogFatal(err.Error())
+		i.shutdown(container)
+		os.Exit(1)
 	} else {
 		elapsed := time.Since(start)
-		i.logger.LogInfof("Ready (startup time %s)", elapsed) /*
-
-			for {
-
-			}*/
+		i.logger.LogInfof("Ready (startup time %s)", elapsed)
 
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, os.Interrupt)

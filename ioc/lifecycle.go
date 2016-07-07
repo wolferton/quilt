@@ -15,5 +15,5 @@ type AccessibilityBlocker interface {
 }
 
 type Accessible interface {
-	AllowAccess()
+	AllowAccess() error
 }

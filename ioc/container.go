@@ -16,10 +16,12 @@ const containerComponentName = "quiltContainer"
 type ComponentContainer struct {
 	allComponents    map[string]*Component
 	componentsByType map[string][]interface{}
-	logger           logger.Logger
+	FrameworkLogger  logger.Logger
 	configInjector   *config.ConfigInjector
 	startable        []*Component
 	stoppable        []*Component
+	blocker          []*Component
+	accessible       []*Component
 }
 
 func (cc *ComponentContainer) AllComponents() map[string]*Component {
@@ -44,7 +46,49 @@ func (cc *ComponentContainer) StartComponents() error {
 
 	}
 
+	if len(cc.blocker) != 0 {
+		err := cc.waitForBlockers(5*time.Second, 12, 0)
+
+		if err != nil {
+			return err
+		}
+
+	}
+
+	for _, component := range cc.accessible {
+
+		accessible := component.Instance.(Accessible)
+		err := accessible.AllowAccess()
+
+		if err != nil {
+			return err
+		}
+
+	}
+
 	return nil
+}
+
+func (cc *ComponentContainer) waitForBlockers(retestInterval time.Duration, maxTries int, warnAfterTries int) error {
+
+	var names []string
+
+	for i := 0; i < maxTries; i++ {
+
+		notReady, cNames := cc.countBlocking(i > warnAfterTries)
+		names = cNames
+
+		if notReady == 0 {
+			return nil
+		} else {
+			time.Sleep(retestInterval)
+		}
+	}
+
+	message := fmt.Sprintf("Startup blocked by %v", names)
+
+	return errors.New(message)
+
 }
 
 func (cc *ComponentContainer) ShutdownComponents() error {
@@ -63,7 +107,7 @@ func (cc *ComponentContainer) ShutdownComponents() error {
 		err := s.Stop()
 
 		if err != nil {
-			cc.logger.LogErrorf("%s did not stop cleanly %s", c.Name, err)
+			cc.FrameworkLogger.LogErrorf("%s did not stop cleanly %s", c.Name, err)
 		}
 
 	}
@@ -85,8 +129,36 @@ func (cc *ComponentContainer) waitForReadyToStop(retestInterval time.Duration, m
 		}
 	}
 
-	cc.logger.LogFatal("Some components not ready to stop, stopping anyway")
+	cc.FrameworkLogger.LogFatal("Some components not ready to stop, stopping anyway")
 
+}
+
+func (cc *ComponentContainer) countBlocking(warn bool) (int, []string) {
+
+	notReady := 0
+	names := []string{}
+
+	for _, c := range cc.blocker {
+		ab := c.Instance.(AccessibilityBlocker)
+
+		block, err := ab.BlockAccess()
+
+		if block {
+			notReady += 1
+			names = append(names, c.Name)
+			if warn {
+				if err != nil {
+					cc.FrameworkLogger.LogErrorf("%s blocking startup: %s", c.Name, err)
+				} else {
+					cc.FrameworkLogger.LogErrorf("%s blocking startup (no reason given)", c.Name)
+				}
+
+			}
+		}
+
+	}
+
+	return notReady, names
 }
 
 func (cc *ComponentContainer) countNotReady(warn bool) int {
@@ -103,9 +175,9 @@ func (cc *ComponentContainer) countNotReady(warn bool) int {
 
 			if warn {
 				if err != nil {
-					cc.logger.LogWarnf("%s is not ready to stop: %s", c.Name, err)
+					cc.FrameworkLogger.LogWarnf("%s is not ready to stop: %s", c.Name, err)
 				} else {
-					cc.logger.LogWarnf("%s is not ready to stop (no reason given)", c.Name)
+					cc.FrameworkLogger.LogWarnf("%s is not ready to stop (no reason given)", c.Name)
 				}
 
 			}
@@ -140,8 +212,8 @@ func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, config
 	err := cc.resolveDependenciesAndConfig(protoComponents, configAccessor)
 
 	if err != nil {
-		cc.logger.LogFatal(err.Error())
-		cc.logger.LogInfo("Aborting startup")
+		cc.FrameworkLogger.LogFatal(err.Error())
+		cc.FrameworkLogger.LogInfo("Aborting startup")
 		os.Exit(-1)
 	}
 
@@ -150,7 +222,7 @@ func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, config
 
 func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*ProtoComponent, configAccessor *config.ConfigAccessor) error {
 
-	fl := cc.logger
+	fl := cc.FrameworkLogger
 
 	for _, proto := range protoComponents {
 
@@ -208,7 +280,7 @@ func (cc *ComponentContainer) captureDecorator(component *Component, decorators 
 	decorator, isDecorator := component.Instance.(ComponentDecorator)
 
 	if isDecorator {
-		cc.logger.LogTracef("Found decorator %s", component.Name)
+		cc.FrameworkLogger.LogTracef("Found decorator %s", component.Name)
 		return append(decorators, decorator)
 	} else {
 		return decorators
@@ -219,7 +291,7 @@ func (cc *ComponentContainer) addComponent(component *Component, index int) {
 	cc.allComponents[component.Name] = component
 	cc.mapComponentToType(component)
 
-	l := cc.logger
+	l := cc.FrameworkLogger
 
 	_, startable := component.Instance.(Startable)
 
@@ -235,13 +307,27 @@ func (cc *ComponentContainer) addComponent(component *Component, index int) {
 		cc.stoppable = append(cc.stoppable, component)
 	}
 
+	_, blocker := component.Instance.(AccessibilityBlocker)
+
+	if blocker {
+		l.LogTracef("%s is an AvailabilityBlocker", component.Name)
+		cc.blocker = append(cc.blocker, component)
+	}
+
+	_, accessible := component.Instance.(Accessible)
+
+	if accessible {
+		l.LogTracef("%s is a Accesible", component.Name)
+		cc.accessible = append(cc.accessible, component)
+	}
+
 }
 
 func (cc *ComponentContainer) mapComponentToType(component *Component) {
 	componentType := reflect.TypeOf(component.Instance)
 	typeName := componentType.String()
 
-	cc.logger.LogTracef("Storing component %s of type %s", component.Name, componentType.String())
+	cc.FrameworkLogger.LogTracef("Storing component %s of type %s", component.Name, componentType.String())
 
 	componentsOfSameType := cc.componentsByType[typeName]
 
@@ -258,7 +344,7 @@ func (cc *ComponentContainer) mapComponentToType(component *Component) {
 func CreateContainer(protoComponents []*ProtoComponent, loggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor, configInjector *config.ConfigInjector) *ComponentContainer {
 
 	container := new(ComponentContainer)
-	container.logger = loggingManager.CreateLogger(containerComponentName)
+	container.FrameworkLogger = loggingManager.CreateLogger(containerComponentName)
 	container.configInjector = configInjector
 	container.Populate(protoComponents, configAccessor)
 
