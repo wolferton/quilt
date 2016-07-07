@@ -7,3 +7,7 @@ type Startable interface {
 type Stoppable interface {
 	StopComponent()
 }
+
+type Accessible interface {
+	MakeAvailable()
+}

@@ -17,6 +17,7 @@ type ComponentContainer struct {
 	componentsByType map[string][]interface{}
 	logger           logger.Logger
 	configInjector   *config.ConfigInjector
+	startable        []*Component
 }
 
 func (cc *ComponentContainer) AllComponents() map[string]*Component {
@@ -28,18 +29,15 @@ func (cc *ComponentContainer) FindByType(typeName string) []interface{} {
 }
 
 func (cc *ComponentContainer) StartComponents() error {
-	for _, component := range cc.allComponents {
+	for _, component := range cc.startable {
 
-		startable, isStartable := component.Instance.(Startable)
+		startable := component.Instance.(Startable)
 
-		if isStartable {
-			err := startable.StartComponent()
+		err := startable.StartComponent()
 
-			if err != nil {
-				message := fmt.Sprintf("Unable to start %s: %s", component.Name, err)
-				return errors.New(message)
-			}
-
+		if err != nil {
+			message := fmt.Sprintf("Unable to start %s: %s", component.Name, err)
+			return errors.New(message)
 		}
 
 	}
@@ -149,6 +147,16 @@ func (cc *ComponentContainer) captureDecorator(component *Component, decorators 
 func (cc *ComponentContainer) addComponent(component *Component, index int) {
 	cc.allComponents[component.Name] = component
 	cc.mapComponentToType(component)
+
+	l := cc.logger
+
+	_, startable := component.Instance.(Startable)
+
+	if startable {
+		l.LogTracef("%s is Startable", component.Name)
+		cc.startable = append(cc.startable, component)
+	}
+
 }
 
 func (cc *ComponentContainer) mapComponentToType(component *Component) {
