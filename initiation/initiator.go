@@ -55,7 +55,7 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 	protoComponents = facilitiesInitialisor.InitialiseApplicationLogger(protoComponents)
 	protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, configAccessor, frameworkLoggingManager)
 	protoComponents = facilitiesInitialisor.InitialiseQueryManager(protoComponents)
-	protoComponents = facilitiesInitialisor.InitisaliseDatabaseAccessor(protoComponents)
+	protoComponents = facilitiesInitialisor.InitialiseDatabaseAccessor(protoComponents)
 
 	protoComponents = append(protoComponents, json.InitialiseJsonHttp(frameworkLoggingManager, configAccessor)...)
 	protoComponents = append(protoComponents, serviceerror.InitialiseServiceErrorManager(frameworkLoggingManager, configAccessor)...)

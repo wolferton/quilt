@@ -10,53 +10,89 @@ type DatabaseProvider interface {
 	Database() (*sql.DB, error)
 }
 
-type DatabaseAccessor struct {
-	Provider                      DatabaseProvider
-	QueryManager                  *querymanager.QueryManager
-	FrameworkLogger               logger.Logger
-	DatabaseProviderComponentName string
+type RdbmsClientManager interface {
+	Client() *RdbmsClient
+	ClientFromContext(context interface{}) *RdbmsClient
 }
 
-func (da *DatabaseAccessor) InsertQueryIdParamMap(queryId string, params map[string]interface{}) (sql.Result, error) {
+type DefaultRdbmsClientManager struct {
+	Provider                      DatabaseProvider
+	DatabaseProviderComponentName string
+	QueryManager                  *querymanager.QueryManager
+	db                            *sql.DB
+	FrameworkLogger               logger.Logger
+}
 
-	query, err := da.QueryManager.SubstituteMap(queryId, params)
+func (drcm *DefaultRdbmsClientManager) Client() *RdbmsClient {
+	return newRdbmsClient(drcm.db, drcm.QueryManager)
+}
+
+func (drcm *DefaultRdbmsClientManager) ClientFromContext(context interface{}) *RdbmsClient {
+	return drcm.Client()
+}
+
+func (drcm *DefaultRdbmsClientManager) StartComponent() error {
+
+	db, err := drcm.Provider.Database()
+
+	if err != nil {
+		return err
+
+	} else {
+		drcm.db = db
+		return nil
+	}
+
+}
+
+func newRdbmsClient(database *sql.DB, querymanager *querymanager.QueryManager) *RdbmsClient {
+	rc := new(RdbmsClient)
+	rc.db = database
+	rc.queryManager = querymanager
+
+	return rc
+}
+
+type RdbmsClient struct {
+	db           *sql.DB
+	queryManager *querymanager.QueryManager
+}
+
+func (rc *RdbmsClient) InsertQueryIdParamMap(queryId string, params map[string]interface{}) (sql.Result, error) {
+
+	query, err := rc.queryManager.SubstituteMap(queryId, params)
 
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := da.Provider.Database()
-
-	result, err := db.Exec(query)
+	result, err := rc.db.Exec(query)
 
 	return result, err
 }
 
-func (da *DatabaseAccessor) InsertQueryIdParamMapReturnedId(queryId string, params map[string]interface{}) (int, error) {
+func (rc *RdbmsClient) InsertQueryIdParamMapReturnedId(queryId string, params map[string]interface{}) (int, error) {
 
-	query, err := da.QueryManager.SubstituteMap(queryId, params)
+	query, err := rc.queryManager.SubstituteMap(queryId, params)
 
 	if err != nil {
 		return 0, err
 	}
 
-	db, err := da.Provider.Database()
 	var id int
 
-	err = db.QueryRow(query).Scan(&id)
+	err = rc.db.QueryRow(query).Scan(&id)
 
 	return id, err
 }
 
-func (da *DatabaseAccessor) SelectQueryIdParamMap(queryId string, params map[string]interface{}) (*sql.Rows, error) {
-	query, err := da.QueryManager.SubstituteMap(queryId, params)
+func (rc *RdbmsClient) SelectQueryIdParamMap(queryId string, params map[string]interface{}) (*sql.Rows, error) {
+	query, err := rc.queryManager.SubstituteMap(queryId, params)
 
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := da.Provider.Database()
-
-	return db.Query(query)
+	return rc.db.Query(query)
 
 }
