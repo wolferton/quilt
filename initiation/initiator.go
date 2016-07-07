@@ -10,7 +10,9 @@ import (
 	"github.com/wolferton/quilt/ioc"
 	"github.com/wolferton/quilt/ws/json"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -69,12 +71,33 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 		i.logger.LogFatal(err.Error())
 	} else {
 		elapsed := time.Since(start)
-		i.logger.LogInfof("Ready (startup time %s)", elapsed)
+		i.logger.LogInfof("Ready (startup time %s)", elapsed) /*
+
+			for {
+
+			}*/
+
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		signal.Notify(c, syscall.SIGTERM)
+
+		go func() {
+			<-c
+			i.shutdown(container)
+			os.Exit(1)
+		}()
 
 		for {
 			time.Sleep(100000000000)
 		}
 	}
+}
+
+func (i *Initiator) shutdown(container *ioc.ComponentContainer) {
+	i.logger.LogInfo("Shutting down")
+
+	container.ShutdownComponents()
+
 }
 
 func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingManager *logger.ComponentLoggerManager) *config.ConfigAccessor {

@@ -7,6 +7,7 @@ import (
 	"github.com/wolferton/quilt/facility/logger"
 	"os"
 	"reflect"
+	"time"
 )
 
 const containerDecoratorComponentName = "quiltContainerDecorator"
@@ -18,6 +19,7 @@ type ComponentContainer struct {
 	logger           logger.Logger
 	configInjector   *config.ConfigInjector
 	startable        []*Component
+	stoppable        []*Component
 }
 
 func (cc *ComponentContainer) AllComponents() map[string]*Component {
@@ -43,6 +45,75 @@ func (cc *ComponentContainer) StartComponents() error {
 	}
 
 	return nil
+}
+
+func (cc *ComponentContainer) ShutdownComponents() error {
+
+	for _, c := range cc.stoppable {
+
+		s := c.Instance.(Stoppable)
+		s.PrepareToStop()
+	}
+
+	cc.waitForReadyToStop(5*time.Second, 10, 3)
+
+	for _, c := range cc.stoppable {
+
+		s := c.Instance.(Stoppable)
+		err := s.Stop()
+
+		if err != nil {
+			cc.logger.LogErrorf("%s did not stop cleanly %s", c.Name, err)
+		}
+
+	}
+
+	return nil
+
+}
+
+func (cc *ComponentContainer) waitForReadyToStop(retestInterval time.Duration, maxTries int, warnAfterTries int) {
+
+	for i := 0; i < maxTries; i++ {
+
+		notReady := cc.countNotReady(i > warnAfterTries)
+
+		if notReady == 0 {
+			return
+		} else {
+			time.Sleep(retestInterval)
+		}
+	}
+
+	cc.logger.LogFatal("Some components not ready to stop, stopping anyway")
+
+}
+
+func (cc *ComponentContainer) countNotReady(warn bool) int {
+
+	notReady := 0
+
+	for _, c := range cc.stoppable {
+		s := c.Instance.(Stoppable)
+
+		ready, err := s.ReadyToStop()
+
+		if !ready {
+			notReady += 1
+
+			if warn {
+				if err != nil {
+					cc.logger.LogWarnf("%s is not ready to stop: %s", c.Name, err)
+				} else {
+					cc.logger.LogWarnf("%s is not ready to stop (no reason given)", c.Name)
+				}
+
+			}
+		}
+
+	}
+
+	return notReady
 }
 
 func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, configAccessor *config.ConfigAccessor) {
@@ -155,6 +226,13 @@ func (cc *ComponentContainer) addComponent(component *Component, index int) {
 	if startable {
 		l.LogTracef("%s is Startable", component.Name)
 		cc.startable = append(cc.startable, component)
+	}
+
+	_, stoppable := component.Instance.(Stoppable)
+
+	if stoppable {
+		l.LogTracef("%s is Stoppable", component.Name)
+		cc.stoppable = append(cc.stoppable, component)
 	}
 
 }

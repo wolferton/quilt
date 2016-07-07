@@ -44,3 +44,15 @@ func (drcm *DefaultRdbmsClientManager) StartComponent() error {
 	}
 
 }
+
+func (drcm *DefaultRdbmsClientManager) PrepareToStop() {
+
+}
+
+func (drcm *DefaultRdbmsClientManager) ReadyToStop() (bool, error) {
+	return true, nil
+}
+
+func (drcm *DefaultRdbmsClientManager) Stop() error {
+	return drcm.db.Close()
+}

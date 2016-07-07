@@ -5,9 +5,15 @@ type Startable interface {
 }
 
 type Stoppable interface {
-	StopComponent()
+	PrepareToStop()
+	ReadyToStop() (bool, error)
+	Stop() error
+}
+
+type AccessibilityBlocker interface {
+	BlockAccess() (bool, error)
 }
 
 type Accessible interface {
-	MakeAvailable()
+	AllowAccess()
 }
