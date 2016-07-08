@@ -123,6 +123,8 @@ func (ci *ConfigInjector) PopulateFieldFromJsonPath(fieldName string, path strin
 		targetField.SetString(ca.StringVal(path))
 	case reflect.Bool:
 		targetField.SetBool(ca.BoolValue(path))
+	case reflect.Int:
+		targetField.SetInt(int64(ca.IntValue(path)))
 	default:
 		ci.FrameworkLogger.LogErrorf("Unable to use value at path %s as target field %s is not a suppported type", path, fieldName)
 	}

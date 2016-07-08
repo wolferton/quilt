@@ -70,7 +70,7 @@ func (fi *FacilitiesInitialisor) InitialiseHttpServer(protoComponents []*ioc.Pro
 		return protoComponents
 	}
 
-	httpServerConfig := httpserver.ParseDefaultHttpServerConfig(configAccessor)
+	httpServerConfig := httpserver.ParseDefaultHttpServerConfig(fi.ConfigInjector)
 
 	httpServer := new(httpserver.QuiltHttpServer)
 	httpServer.Config = httpServerConfig

@@ -2,9 +2,9 @@
   "facilities":{
     "httpServer":{
       "enabled": true,
-      "listenPort": 8080,
-      "contentType": "application/json",
-      "encoding": "utf-8"
+      "Port": 8080,
+      "ContentType": "application/json",
+      "Encoding": "utf-8"
     }
   }
 }

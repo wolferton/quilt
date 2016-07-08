@@ -54,5 +54,12 @@ func (drcm *DefaultRdbmsClientManager) ReadyToStop() (bool, error) {
 }
 
 func (drcm *DefaultRdbmsClientManager) Stop() error {
-	return drcm.db.Close()
+
+	db := drcm.db
+
+	if db != nil {
+		return db.Close()
+	} else {
+		return nil
+	}
 }

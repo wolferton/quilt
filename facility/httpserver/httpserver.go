@@ -1,18 +1,22 @@
 package httpserver
 
 import (
+	"errors"
 	"fmt"
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
 	"net/http"
+	"os"
 	"regexp"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const defaultHttpServerConfigBase = "facilities.httpServer"
-const httpListenPortPath = "listenPort"
-const httpContentTypePath = "contentType"
-const httpEncodingPath = "encoding"
+const commonLogDateFormat = "[02/Jan/2006:15:04:05 -0700]"
+const commonLogLineFormat = "%s - - %s \"%s %s %s\" %s %s\n"
 
 type RegisteredProvider struct {
 	Provider HttpEndpointProvider
@@ -24,6 +28,7 @@ type QuiltHttpServer struct {
 	registeredProvidersByMethod map[string][]*RegisteredProvider
 	componentContainer          *ioc.ComponentContainer
 	Logger                      logger.Logger
+	AccessLog                   *os.File
 }
 
 func (qhs *QuiltHttpServer) Container(container *ioc.ComponentContainer) {
@@ -71,10 +76,38 @@ func (qhs *QuiltHttpServer) StartComponent() error {
 			qhs.registerProvider(provider)
 
 		}
+	}
+
+	if qhs.Config.EnableAccessLog {
+		err := qhs.configureAccessLog()
+
+		if err != nil {
+			return err
+		}
 
 	}
 
 	return nil
+}
+
+func (qhs *QuiltHttpServer) configureAccessLog() error {
+
+	logPath := qhs.Config.AccessLogPath
+
+	if len(strings.TrimSpace(logPath)) == 0 {
+		return errors.New("Access log is enabled, but no path to a log file specified")
+	}
+
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+
+	if err != nil {
+		return err
+	}
+
+	qhs.AccessLog = f
+
+	return nil
+
 }
 
 func (qhs *QuiltHttpServer) AllowAccess() error {
@@ -108,31 +141,68 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 
 		if pattern.MatchString(path) {
 			h.Logger.LogTracef("Matches %s", pattern.String())
-			handlerPattern.Provider.ServeHTTP(responseWriter, request)
+
+			wrw := new(wrappedResponseWriter)
+			wrw.rw = responseWriter
+
+			handlerPattern.Provider.ServeHTTP(wrw, request)
+			h.writeAccessLog(wrw, request)
+
 		}
 
 	}
 
 }
 
+func (h *QuiltHttpServer) writeAccessLog(responseWriter *wrappedResponseWriter, request *http.Request) {
+	f := h.AccessLog
+	s := strconv.Itoa(responseWriter.Status)
+	b := strconv.Itoa(responseWriter.BytesServed)
+	t := time.Now().Format(commonLogDateFormat)
+	ll := fmt.Sprintf(commonLogLineFormat, request.RemoteAddr, t, request.Method, request.RequestURI, request.Proto, s, b)
+
+	f.WriteString(ll)
+}
+
 type HttpServerConfig struct {
-	Port        int
-	ContentType string
-	Encoding    string
+	Port             int
+	ContentType      string
+	Encoding         string
+	EnableAccessLog  bool
+	AccessLogPath    string
+	AccessLogPattern string
 }
 
-func ParseDefaultHttpServerConfig(configAccessor *config.ConfigAccessor) HttpServerConfig {
-	return ParseHttpServerConfig(configAccessor, defaultHttpServerConfigBase)
+func ParseDefaultHttpServerConfig(injector *config.ConfigInjector) HttpServerConfig {
+	return ParseHttpServerConfig(injector, defaultHttpServerConfigBase)
 }
 
-func ParseHttpServerConfig(configAccessor *config.ConfigAccessor, baseConfigPath string) HttpServerConfig {
+func ParseHttpServerConfig(injector *config.ConfigInjector, baseConfigPath string) HttpServerConfig {
 
-	pathSep := config.JsonPathSeparator
 	var httpServerConfig HttpServerConfig
-
-	httpServerConfig.Port = configAccessor.IntValue(baseConfigPath + pathSep + httpListenPortPath)
-	httpServerConfig.ContentType = configAccessor.StringVal(baseConfigPath + pathSep + httpContentTypePath)
-	httpServerConfig.Encoding = configAccessor.StringVal(baseConfigPath + pathSep + httpEncodingPath)
+	injector.PopulateObjectFromJsonPath(baseConfigPath, &httpServerConfig)
 
 	return httpServerConfig
+}
+
+type wrappedResponseWriter struct {
+	rw          http.ResponseWriter
+	Status      int
+	BytesServed int
+}
+
+func (wrw *wrappedResponseWriter) Header() http.Header {
+	return wrw.rw.Header()
+}
+
+func (wrw *wrappedResponseWriter) Write(b []byte) (int, error) {
+
+	wrw.BytesServed += len(b)
+
+	return wrw.rw.Write(b)
+}
+
+func (wrw *wrappedResponseWriter) WriteHeader(i int) {
+	wrw.Status = i
+	wrw.rw.WriteHeader(i)
 }
