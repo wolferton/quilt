@@ -12,13 +12,14 @@ import (
 	"time"
 )
 
+const DefaultLogBufferLength = 10
 const percent = "%"
-const hypen = "-"
+const hyphen = "-"
 const unsupported = "???"
 const presetCommonName = "common"
-const presetCommonFormat = "%h %l %u %t \"%r\" %>s %b"
+const presetCommonFormat = "%h %l %u %t \"%r\" %s %b"
 const presetCombinedName = "combined"
-const presetCombinedFormat = "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\""
+const presetCombinedFormat = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-agent}i\""
 
 const formatRegex = "\\%[a-zA-Z]|\\%\\%|\\%{[^}]*}[a-zA-Z]"
 const varModifiedRegex = "\\%{([^}]*)}([a-zA-Z])"
@@ -55,20 +56,6 @@ type LogLineElement struct {
 	variable        string
 }
 
-func (lle *LogLineElement) String() string {
-
-	switch lle.elementType {
-	case Text:
-		return "text/" + lle.content
-	case Placeholder:
-		return fmt.Sprintf("ph/%d", lle.placeholderType)
-	case PlaceholderWithVar:
-		return fmt.Sprintf("vph/%d %s", lle.placeholderType, lle.variable)
-	}
-
-	return "???"
-}
-
 func newTextLogLineElement(text string) *LogLineElement {
 
 	e := new(LogLineElement)
@@ -103,11 +90,12 @@ type AccessLogWriter struct {
 	LogLineFormat string
 	LogLinePreset string
 	elements      []*LogLineElement
+	lines         chan string
 }
 
 func (alw *AccessLogWriter) LogRequest(req *http.Request, res *wrappedResponseWriter, rec *time.Time, fin *time.Time, id *IdentityMap) {
 
-	fmt.Println(alw.buildLine(req, res, rec, fin, id))
+	alw.lines <- alw.buildLine(req, res, rec, fin, id)
 
 }
 
@@ -121,15 +109,20 @@ func (alw *AccessLogWriter) buildLine(req *http.Request, res *wrappedResponseWri
 			b.WriteString(e.content)
 		case Placeholder:
 			b.WriteString(alw.findValue(e, req, res, rec, fin, id))
-
+		case PlaceholderWithVar:
+			b.WriteString(alw.findValueWithVar(e, req, res, rec, fin, id))
 		}
 	}
+
+	b.WriteString("\n")
 
 	return b.String()
 
 }
 
 func (alw *AccessLogWriter) StartComponent() error {
+
+	alw.lines = make(chan string, DefaultLogBufferLength)
 
 	err := alw.configureLogFormat()
 
@@ -139,8 +132,23 @@ func (alw *AccessLogWriter) StartComponent() error {
 
 	err = alw.openFile()
 
+	go alw.watchLineBuffer()
+
 	return err
 
+}
+
+func (alw *AccessLogWriter) watchLineBuffer() {
+	for {
+		line := <-alw.lines
+
+		f := alw.logFile
+
+		if f != nil {
+			f.WriteString(line)
+		}
+
+	}
 }
 
 func (alw *AccessLogWriter) openFile() error {
@@ -325,6 +333,16 @@ func (alw *AccessLogWriter) mapPlaceholder(ph string) LogFormatPlaceHolder {
 
 }
 
+func (alw *AccessLogWriter) findValueWithVar(element *LogLineElement, req *http.Request, res *wrappedResponseWriter, received *time.Time, finished *time.Time, id *IdentityMap) string {
+	switch element.placeholderType {
+	case RequestHeader:
+		return alw.requestHeader(element.variable, req)
+	default:
+		return unsupported
+
+	}
+}
+
 func (alw *AccessLogWriter) findValue(element *LogLineElement, req *http.Request, res *wrappedResponseWriter, received *time.Time, finished *time.Time, id *IdentityMap) string {
 
 	switch element.placeholderType {
@@ -334,7 +352,7 @@ func (alw *AccessLogWriter) findValue(element *LogLineElement, req *http.Request
 
 	case BytesReturnedClf:
 		if res.BytesServed == 0 {
-			return hypen
+			return hyphen
 		} else {
 			return (strconv.Itoa(res.BytesServed))
 		}
@@ -346,7 +364,7 @@ func (alw *AccessLogWriter) findValue(element *LogLineElement, req *http.Request
 		return req.RemoteAddr
 
 	case ClientId:
-		return hypen
+		return hyphen
 
 	case UserId:
 		return alw.userId(id)
@@ -357,9 +375,25 @@ func (alw *AccessLogWriter) findValue(element *LogLineElement, req *http.Request
 	case ReceivedTime:
 		return received.Format(commonLogDateFormat)
 
+	case StatusCode:
+		return strconv.Itoa(res.Status)
+
 	default:
 		return unsupported
 
+	}
+
+}
+
+func (alw *AccessLogWriter) requestHeader(name string, req *http.Request) string {
+
+	value := req.Header.Get(name)
+
+	if value == "" {
+		return hyphen
+
+	} else {
+		return value
 	}
 
 }
@@ -373,7 +407,7 @@ func (alw *AccessLogWriter) requestLine(req *http.Request) string {
 func (alw *AccessLogWriter) userId(id *IdentityMap) string {
 
 	if id == nil || id.PublicUserId() == "" {
-		return hypen
+		return hyphen
 
 	} else {
 		return id.PublicUserId()
