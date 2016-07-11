@@ -21,6 +21,9 @@ const presetCommonFormat = "%h %l %u %t \"%r\" %s %b"
 const presetCombinedName = "combined"
 const presetCombinedFormat = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-agent}i\""
 
+const presetframeworkName = "framework"
+const presetFrameworkFormat = "%h XFF[%{X-Forwarded-For}i] %l %u [%{02/Jan/2006:15:04:05 Z0700}t] \"%m %U%q\" %s %bB %{us}Tμs"
+
 const formatRegex = "\\%[a-zA-Z]|\\%\\%|\\%{[^}]*}[a-zA-Z]"
 const varModifiedRegex = "\\%{([^}]*)}([a-zA-Z])"
 const commonLogDateFormat = "[02/Jan/2006:15:04:05 -0700]"
@@ -39,6 +42,11 @@ const (
 	BytesReturnedClf
 	RequestHeader
 	PercentSymbol
+	Method
+	Path
+	Query
+	ProcessTimeMicro
+	ProcessTime
 )
 
 type LogLineElementType int
@@ -89,6 +97,7 @@ type AccessLogWriter struct {
 	LogPath       string
 	LogLineFormat string
 	LogLinePreset string
+	UtcTimes      bool
 	elements      []*LogLineElement
 	lines         chan string
 }
@@ -101,6 +110,14 @@ func (alw *AccessLogWriter) LogRequest(req *http.Request, res *wrappedResponseWr
 
 func (alw *AccessLogWriter) buildLine(req *http.Request, res *wrappedResponseWriter, rec *time.Time, fin *time.Time, id *IdentityMap) string {
 	var b bytes.Buffer
+
+	if alw.UtcTimes {
+		utcRec := rec.UTC()
+		utcFin := fin.UTC()
+
+		rec = &utcRec
+		fin = &utcFin
+	}
 
 	for _, e := range alw.elements {
 
@@ -188,6 +205,9 @@ func (alw *AccessLogWriter) configureLogFormat() error {
 
 		} else if pre == presetCombinedName {
 			return alw.parseFormat(presetCombinedFormat)
+
+		} else if pre == presetframeworkName {
+			return alw.parseFormat(presetFrameworkFormat)
 
 		} else {
 			message := fmt.Sprintf("%s is not a supported preset for access log lines", pre)
@@ -315,20 +335,30 @@ func (alw *AccessLogWriter) mapPlaceholder(ph string) LogFormatPlaceHolder {
 		return BytesReturnedClf
 	case "B":
 		return BytesReturned
+	case "D":
+		return ProcessTimeMicro
 	case "h":
 		return RemoteHost
 	case "i":
 		return RequestHeader
 	case "l":
 		return ClientId
+	case "m":
+		return Method
+	case "q":
+		return Query
 	case "r":
 		return RequestLine
 	case "s":
 		return StatusCode
 	case "t":
 		return ReceivedTime
+	case "T":
+		return ProcessTime
 	case "u":
 		return UserId
+	case "U":
+		return Path
 	}
 
 }
@@ -337,6 +367,24 @@ func (alw *AccessLogWriter) findValueWithVar(element *LogLineElement, req *http.
 	switch element.placeholderType {
 	case RequestHeader:
 		return alw.requestHeader(element.variable, req)
+
+	case ReceivedTime:
+		return received.Format(element.variable)
+
+	case ProcessTime:
+
+		switch element.variable {
+		case "s":
+			return alw.processTime(received, finished, time.Second)
+		case "us":
+			return alw.processTime(received, finished, time.Microsecond)
+		case "ms":
+			return alw.processTime(received, finished, time.Millisecond)
+		default:
+			return "??"
+
+		}
+
 	default:
 		return unsupported
 
@@ -369,6 +417,15 @@ func (alw *AccessLogWriter) findValue(element *LogLineElement, req *http.Request
 	case UserId:
 		return alw.userId(id)
 
+	case Method:
+		return req.Method
+
+	case Path:
+		return req.URL.Path
+
+	case Query:
+		return alw.query(req)
+
 	case RequestLine:
 		return alw.requestLine(req)
 
@@ -378,9 +435,34 @@ func (alw *AccessLogWriter) findValue(element *LogLineElement, req *http.Request
 	case StatusCode:
 		return strconv.Itoa(res.Status)
 
+	case ProcessTimeMicro:
+		return alw.processTime(received, finished, time.Microsecond)
+
+	case ProcessTime:
+		return alw.processTime(received, finished, time.Second)
+
 	default:
 		return unsupported
 
+	}
+
+}
+
+func (alw *AccessLogWriter) processTime(rec *time.Time, fin *time.Time, unit time.Duration) string {
+	spent := fin.Sub(*rec)
+
+	return strconv.FormatInt(int64(spent/unit), 10)
+}
+
+func (alw *AccessLogWriter) query(req *http.Request) string {
+
+	q := req.URL.RawQuery
+
+	if q == "" {
+		return q
+	} else {
+
+		return "?" + q
 	}
 
 }
