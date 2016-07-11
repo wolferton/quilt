@@ -12,8 +12,6 @@ import (
 
 const defaultHttpServerConfigBase = "facilities.httpServer"
 
-const commonLogLineFormat = "%s - - %s \"%s %s %s\" %s %s\n"
-
 type RegisteredProvider struct {
 	Provider HttpEndpointProvider
 	Pattern  *regexp.Regexp
@@ -92,6 +90,7 @@ func (qhs *QuiltHttpServer) AllowAccess() error {
 func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request *http.Request) {
 
 	received := time.Now()
+	matched := false
 
 	contentType := fmt.Sprintf("%s; charset=%s", h.Config.ContentType, h.Config.Encoding)
 	responseWriter.Header().Set("Content-Type", contentType)
@@ -102,6 +101,9 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 
 	h.Logger.LogTracef("Finding provider to handle %s %s from %d providers", path, request.Method, len(providersByMethod))
 
+	wrw := new(wrappedResponseWriter)
+	wrw.rw = responseWriter
+
 	for _, handlerPattern := range providersByMethod {
 
 		pattern := handlerPattern.Pattern
@@ -110,32 +112,27 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 
 		if pattern.MatchString(path) {
 			h.Logger.LogTracef("Matches %s", pattern.String())
-
-			wrw := new(wrappedResponseWriter)
-			wrw.rw = responseWriter
-
+			matched = true
 			handlerPattern.Provider.ServeHTTP(wrw, request)
-
-			if h.AccessLogWriter != nil {
-				finished := time.Now()
-				h.AccessLogWriter.LogRequest(request, wrw, &received, &finished, nil)
-			}
 		}
+	}
 
+	if !matched {
+		h.handleNotFound(request, wrw)
+	}
+
+	if h.AccessLogWriter != nil {
+		finished := time.Now()
+		h.AccessLogWriter.LogRequest(request, wrw, &received, &finished, nil)
 	}
 
 }
 
-/*
-func (h *QuiltHttpServer) writeAccessLog(responseWriter *wrappedResponseWriter, request *http.Request) {
-	f := h.AccessLog
-	s := strconv.Itoa(responseWriter.Status)
-	b := strconv.Itoa(responseWriter.BytesServed)
-	t := time.Now().Format(commonLogDateFormat)
-	ll := fmt.Sprintf(commonLogLineFormat, request.RemoteAddr, t, request.Method, request.RequestURI, request.Proto, s, b)
+func (h *QuiltHttpServer) handleNotFound(req *http.Request, res *wrappedResponseWriter) {
 
-	f.WriteString(ll)
-}*/
+	http.NotFound(res, req)
+
+}
 
 type HttpServerConfig struct {
 	Port        int
