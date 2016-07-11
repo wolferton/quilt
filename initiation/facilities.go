@@ -14,6 +14,7 @@ const applicationLoggingManagerName = ioc.FrameworkPrefix + "ApplicationLoggingM
 const frameworkLoggingManagerName = ioc.FrameworkPrefix + "FrameworkLoggingManager"
 const applicationLoggingDecoratorName = ioc.FrameworkPrefix + "ApplicationLoggingDecorator"
 const httpServerName = ioc.FrameworkPrefix + "HttpServer"
+const accessLogWriterName = ioc.FrameworkPrefix + "AccessLogWriter"
 const queryManagerName = ioc.FrameworkPrefix + "QueryManager"
 const rdbmsClientManagerName = ioc.FrameworkPrefix + "RdbmsClientManager"
 
@@ -77,8 +78,21 @@ func (fi *FacilitiesInitialisor) InitialiseHttpServer(protoComponents []*ioc.Pro
 	httpServer.Logger = frameworkLoggingManager.CreateLogger(httpServerName)
 
 	proto := ioc.CreateProtoComponent(httpServer, httpServerName)
+	protoComponents = append(protoComponents, proto)
 
-	return append(protoComponents, proto)
+	if !configAccessor.BoolValue("facilities.httpServer.accessLog.enabled") {
+		return protoComponents
+	}
+
+	accessLogWriter := new(httpserver.AccessLogWriter)
+	fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.httpServer.accessLog", accessLogWriter)
+
+	httpServer.AccessLogWriter = accessLogWriter
+
+	proto = ioc.CreateProtoComponent(accessLogWriter, accessLogWriterName)
+	protoComponents = append(protoComponents, proto)
+
+	return protoComponents
 }
 
 func (fi *FacilitiesInitialisor) InitialiseQueryManager(protoComponents []*ioc.ProtoComponent) []*ioc.ProtoComponent {

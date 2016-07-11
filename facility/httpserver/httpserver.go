@@ -1,21 +1,17 @@
 package httpserver
 
 import (
-	"errors"
 	"fmt"
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
 	"net/http"
-	"os"
 	"regexp"
-	"strconv"
-	"strings"
 	"time"
 )
 
 const defaultHttpServerConfigBase = "facilities.httpServer"
-const commonLogDateFormat = "[02/Jan/2006:15:04:05 -0700]"
+
 const commonLogLineFormat = "%s - - %s \"%s %s %s\" %s %s\n"
 
 type RegisteredProvider struct {
@@ -28,7 +24,7 @@ type QuiltHttpServer struct {
 	registeredProvidersByMethod map[string][]*RegisteredProvider
 	componentContainer          *ioc.ComponentContainer
 	Logger                      logger.Logger
-	AccessLog                   *os.File
+	AccessLogWriter             *AccessLogWriter
 }
 
 func (qhs *QuiltHttpServer) Container(container *ioc.ComponentContainer) {
@@ -78,36 +74,7 @@ func (qhs *QuiltHttpServer) StartComponent() error {
 		}
 	}
 
-	if qhs.Config.EnableAccessLog {
-		err := qhs.configureAccessLog()
-
-		if err != nil {
-			return err
-		}
-
-	}
-
 	return nil
-}
-
-func (qhs *QuiltHttpServer) configureAccessLog() error {
-
-	logPath := qhs.Config.AccessLogPath
-
-	if len(strings.TrimSpace(logPath)) == 0 {
-		return errors.New("Access log is enabled, but no path to a log file specified")
-	}
-
-	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
-
-	if err != nil {
-		return err
-	}
-
-	qhs.AccessLog = f
-
-	return nil
-
 }
 
 func (qhs *QuiltHttpServer) AllowAccess() error {
@@ -123,6 +90,8 @@ func (qhs *QuiltHttpServer) AllowAccess() error {
 }
 
 func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request *http.Request) {
+
+	received := time.Now()
 
 	contentType := fmt.Sprintf("%s; charset=%s", h.Config.ContentType, h.Config.Encoding)
 	responseWriter.Header().Set("Content-Type", contentType)
@@ -146,14 +115,18 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 			wrw.rw = responseWriter
 
 			handlerPattern.Provider.ServeHTTP(wrw, request)
-			h.writeAccessLog(wrw, request)
 
+			if h.AccessLogWriter != nil {
+				finished := time.Now()
+				h.AccessLogWriter.LogRequest(request, wrw, &received, &finished, nil)
+			}
 		}
 
 	}
 
 }
 
+/*
 func (h *QuiltHttpServer) writeAccessLog(responseWriter *wrappedResponseWriter, request *http.Request) {
 	f := h.AccessLog
 	s := strconv.Itoa(responseWriter.Status)
@@ -162,15 +135,12 @@ func (h *QuiltHttpServer) writeAccessLog(responseWriter *wrappedResponseWriter, 
 	ll := fmt.Sprintf(commonLogLineFormat, request.RemoteAddr, t, request.Method, request.RequestURI, request.Proto, s, b)
 
 	f.WriteString(ll)
-}
+}*/
 
 type HttpServerConfig struct {
-	Port             int
-	ContentType      string
-	Encoding         string
-	EnableAccessLog  bool
-	AccessLogPath    string
-	AccessLogPattern string
+	Port        int
+	ContentType string
+	Encoding    string
 }
 
 func ParseDefaultHttpServerConfig(injector *config.ConfigInjector) HttpServerConfig {
