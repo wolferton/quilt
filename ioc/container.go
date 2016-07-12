@@ -129,7 +129,7 @@ func (cc *ComponentContainer) waitForReadyToStop(retestInterval time.Duration, m
 		}
 	}
 
-	cc.FrameworkLogger.LogFatal("Some components not ready to stop, stopping anyway")
+	cc.FrameworkLogger.LogFatalf("Some components not ready to stop, stopping anyway")
 
 }
 
@@ -212,8 +212,8 @@ func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, config
 	err := cc.resolveDependenciesAndConfig(protoComponents, configAccessor)
 
 	if err != nil {
-		cc.FrameworkLogger.LogFatal(err.Error())
-		cc.FrameworkLogger.LogInfo("Aborting startup")
+		cc.FrameworkLogger.LogFatalf(err.Error())
+		cc.FrameworkLogger.LogInfof("Aborting startup")
 		os.Exit(-1)
 	}
 

@@ -43,7 +43,7 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 	protoComponents, frameworkLoggingManager := facilitiesInitialisor.BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
 	i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
 
-	i.logger.LogInfo("Creating framework components")
+	i.logger.LogInfof("Creating framework components")
 
 	configAccessor := i.loadConfigIntoAccessor(params["config"], frameworkLoggingManager)
 	facilitiesInitialisor.ConfigAccessor = configAccessor
@@ -64,11 +64,11 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 
 	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
 
-	i.logger.LogInfo("Starting components")
+	i.logger.LogInfof("Starting components")
 	err := container.StartComponents()
 
 	if err != nil {
-		i.logger.LogFatal(err.Error())
+		i.logger.LogFatalf(err.Error())
 		i.shutdown(container)
 		os.Exit(1)
 	} else {
@@ -92,7 +92,7 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 }
 
 func (i *Initiator) shutdown(container *ioc.ComponentContainer) {
-	i.logger.LogInfo("Shutting down")
+	i.logger.LogInfof("Shutting down")
 
 	container.ShutdownComponents()
 
@@ -112,10 +112,10 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 
 	if i.logger.IsLevelEnabled(logger.Debug) {
 
-		i.logger.LogDebug("Loading configuration from: ")
+		i.logger.LogDebugf("Loading configuration from: ")
 
 		for _, fileName := range configFiles {
-			i.logger.LogDebug(fileName)
+			i.logger.LogDebugf(fileName)
 		}
 	}
 

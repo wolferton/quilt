@@ -41,6 +41,10 @@ type DefaultJsonResponseWriter struct {
 
 func (djrw *DefaultJsonResponseWriter) Write(res *ws.WsResponse, w http.ResponseWriter) error {
 
+	if res.Body == nil {
+		return nil
+	}
+
 	wrapper := wrapJsonResponse(nil, res.Body)
 
 	data, err := json.Marshal(wrapper)

@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -21,19 +22,13 @@ type FrameworkLogSource interface {
 }
 
 type Logger interface {
-	LogTrace(message string)
 	LogTracef(format string, a ...interface{})
-	LogDebug(message string)
 	LogDebugf(format string, a ...interface{})
-	LogInfo(message string)
 	LogInfof(format string, a ...interface{})
-	LogWarn(message string)
 	LogWarnf(format string, a ...interface{})
-	LogError(message string)
 	LogErrorf(format string, a ...interface{})
-	LogFatal(message string)
+	LogErrorfWithTrace(format string, a ...interface{})
 	LogFatalf(format string, a ...interface{})
-	LogAtLevel(level int, levelLabel string, message string)
 	LogAtLevelf(level int, levelLabel string, format string, a ...interface{})
 	IsLevelEnabled(level int) bool
 }
@@ -103,48 +98,35 @@ func (lal *LevelAwareLogger) LogAtLevelf(level int, levelLabel string, format st
 	lal.logf(levelLabel, level, format, a...)
 }
 
-func (lal *LevelAwareLogger) LogTrace(message string) {
-	lal.log(TraceLabel, Trace, message)
-}
-
 func (lal *LevelAwareLogger) LogTracef(format string, a ...interface{}) {
 	lal.logf(TraceLabel, Trace, format, a...)
-}
-
-func (lal *LevelAwareLogger) LogDebug(message string) {
-	lal.log(DebugLabel, Debug, message)
 }
 
 func (lal *LevelAwareLogger) LogDebugf(format string, a ...interface{}) {
 	lal.logf(DebugLabel, Debug, format, a...)
 }
 
-func (lal *LevelAwareLogger) LogInfo(message string) {
-	lal.log(InfoLabel, Info, message)
-}
-
 func (lal *LevelAwareLogger) LogInfof(format string, a ...interface{}) {
 	lal.logf(InfoLabel, Info, format, a...)
-}
-
-func (lal *LevelAwareLogger) LogWarn(message string) {
-	lal.log(WarnLabel, Warn, message)
 }
 
 func (lal *LevelAwareLogger) LogWarnf(format string, a ...interface{}) {
 	lal.logf(WarnLabel, Warn, format, a...)
 }
 
-func (lal *LevelAwareLogger) LogError(message string) {
-	lal.log(ErrorLabel, Error, message)
-}
-
 func (lal *LevelAwareLogger) LogErrorf(format string, a ...interface{}) {
 	lal.logf(ErrorLabel, Error, format, a...)
 }
 
-func (lal *LevelAwareLogger) LogFatal(message string) {
-	lal.log(FatalLabel, Fatal, message)
+func (lal *LevelAwareLogger) LogErrorfWithTrace(format string, a ...interface{}) {
+	trace := make([]byte, 2048)
+	runtime.Stack(trace, true)
+
+	format = format + "\n%s"
+	a = append(a, trace)
+
+	lal.logf(ErrorLabel, Error, format, a...)
+
 }
 
 func (lal *LevelAwareLogger) LogFatalf(format string, a ...interface{}) {

@@ -74,8 +74,8 @@ func (qm *QueryManager) SubstituteMap(queryId string, params map[string]interfac
 
 func (qm *QueryManager) StartComponent() error {
 	fl := qm.FrameworkLogger
-	fl.LogDebug("Starting QueryManager")
-	fl.LogDebug(qm.TemplateLocation)
+	fl.LogDebugf("Starting QueryManager")
+	fl.LogDebugf(qm.TemplateLocation)
 
 	queryFiles, err := config.FileListFromPath(qm.TemplateLocation)
 

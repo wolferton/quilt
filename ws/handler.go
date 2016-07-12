@@ -118,7 +118,7 @@ func (wh *WsHandler) writeErrorResponse(errors *ServiceErrors, w http.ResponseWr
 
 	defer func() {
 		if r := recover(); r != nil {
-			l.LogErrorf("Panic recovered while trying to write a response that was already in error %s", r)
+			l.LogErrorfWithTrace("Panic recovered while trying to write a response that was already in error %s", r)
 		}
 	}()
 
