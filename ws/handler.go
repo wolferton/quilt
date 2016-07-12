@@ -20,6 +20,8 @@ type WsHandler struct {
 	ErrorFinder            ServiceErrorFinder
 	RevealPanicDetails     bool
 	DisableQueryParsing    bool
+	DeferUnmarshalError    bool
+	BindQueryParams        map[string]string
 }
 
 func (wh *WsHandler) ProvideErrorFinder(finder ServiceErrorFinder) {
@@ -39,7 +41,7 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	wsReq, err := wh.Unmarshaller.Unmarshall(req, logic)
 
 	if err != nil {
-		wh.writeUnmarshallError(err, w)
+		wh.handleUnmarshallError(err, w, wsReq)
 		return
 	}
 
@@ -71,6 +73,10 @@ func (wh *WsHandler) processQueryParams(req *http.Request, wsReq *WsRequest) {
 	values := req.URL.Query()
 	wsReq.QueryParams = NewWsQueryParams(values)
 
+	if wsReq.RequestBody != nil && wh.BindQueryParams != nil {
+		//err := BindQueryParams
+	}
+
 }
 
 //HttpEndpointProvider
@@ -87,16 +93,24 @@ func (wh *WsHandler) RegexPattern() string {
 	return wh.PathMatchPattern
 }
 
-func (wh *WsHandler) writeUnmarshallError(err error, w http.ResponseWriter) {
-	wh.QuiltApplicationLogger.LogErrorf("Error unmarshalling request body %s", err)
+func (wh *WsHandler) handleUnmarshallError(err error, w http.ResponseWriter, wsReq *WsRequest) {
+	wh.QuiltApplicationLogger.LogWarnf("Error unmarshalling request body %s", err)
 
-	var se ServiceErrors
-	se.HttpStatus = http.StatusBadRequest
+	if wh.DeferUnmarshalError {
+		//Add a framework error for a validator to pick up later
+		f := NewUnmarshallWsFrameworkError(err.Error())
+		wsReq.AddFrameworkError(f)
 
-	message := fmt.Sprintf("There is a problem with the body of the request: %s", err)
-	se.AddError(Client, "UNMARSH", message)
+	} else {
 
-	wh.writeErrorResponse(&se, w)
+		var se ServiceErrors
+		se.HttpStatus = http.StatusBadRequest
+
+		message := fmt.Sprintf("There is a problem with the body of the request: %s", err)
+		se.AddError(Client, "UNMARSH", message)
+
+		wh.writeErrorResponse(&se, w)
+	}
 
 }
 

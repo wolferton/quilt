@@ -44,7 +44,7 @@ func (qp *WsQueryParams) StringValue(key string) (string, error) {
 
 }
 
-func (qp *WsQueryParams) BoolValue(key string) (string, error) {
+func (qp *WsQueryParams) BoolValue(key string) (bool, error) {
 
 	v := qp.values[key]
 
@@ -52,7 +52,7 @@ func (qp *WsQueryParams) BoolValue(key string) (string, error) {
 		return false, qp.noVal(key)
 	}
 
-	b, err := strconv.ParseBool(v)
+	b, err := strconv.ParseBool(v[len(v)-1])
 
 	return b, err
 
@@ -61,4 +61,10 @@ func (qp *WsQueryParams) BoolValue(key string) (string, error) {
 func (qp *WsQueryParams) noVal(key string) error {
 	message := fmt.Sprintf("No value available for key %s", key)
 	return errors.New(message)
+}
+
+func BindQueryParams(target interface{}, qp *WsQueryParams, req *WsRequest, bindings map[string]string) error {
+
+	return nil
+
 }

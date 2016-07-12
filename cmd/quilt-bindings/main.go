@@ -106,7 +106,7 @@ func (cbc *CreateBindingsCommand) writeBindingsSource(outPath string, configAcce
 	file, err := os.Create(outPath)
 
 	if err != nil {
-		cbc.logger.LogFatal(err.(*os.PathError).Error())
+		cbc.logger.LogFatalf(err.(*os.PathError).Error())
 		os.Exit(-1)
 	}
 
@@ -145,6 +145,8 @@ func (cbc *CreateBindingsCommand) writeBindingsSource(outPath string, configAcce
 					cbc.writeMapValue(writer, instanceVariableName, fieldName, fieldContents.(map[string]interface{}))
 				case config.JsonString:
 					cbc.writeStringValue(writer, instanceVariableName, fieldName, fieldContents.(string), componentProtoName)
+				case config.JsonBool:
+					cbc.writeBoolValue(writer, instanceVariableName, fieldName, fieldContents.(bool), componentProtoName)
 				case config.JsonUnknown:
 					cbc.logger.LogErrorf("Unknown JSON type for field %s on component %s", fieldName, name)
 				}
@@ -160,6 +162,18 @@ func (cbc *CreateBindingsCommand) writeBindingsSource(outPath string, configAcce
 	writer.WriteString("\treturn pc\n")
 	writer.WriteString("}\n")
 	writer.Flush()
+}
+
+func (cbc *CreateBindingsCommand) writeBoolValue(writer *bufio.Writer, instanceName string, fieldName string, fieldContents bool, componentProtoName string) {
+
+	writer.WriteString("\t")
+	writer.WriteString(instanceName)
+	writer.WriteString(".")
+	writer.WriteString(fieldName)
+	writer.WriteString(" = ")
+	writer.WriteString(strconv.FormatBool(fieldContents))
+	writer.WriteString("\n")
+
 }
 
 func (cbc *CreateBindingsCommand) writeStringValue(writer *bufio.Writer, instanceName string, fieldName string, fieldContents string, componentProtoName string) {

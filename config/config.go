@@ -14,6 +14,7 @@ const (
 	JsonString  = 1
 	JsonArray   = 2
 	JsonMap     = 3
+	JsonBool    = 4
 )
 
 type ConfigValue interface{}
@@ -85,6 +86,8 @@ func JsonType(value interface{}) int {
 		return JsonString
 	case map[string]interface{}:
 		return JsonMap
+	case bool:
+		return JsonBool
 	default:
 		return JsonUnknown
 	}

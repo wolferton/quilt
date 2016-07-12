@@ -13,16 +13,45 @@ func NewWsResponse(errorFinder ServiceErrorFinder) *WsResponse {
 }
 
 type WsRequest struct {
-	PathParameters map[string]string
-	HttpMethod     string
-	RequestBody    interface{}
-	QueryParams    *WsQueryParams
+	PathParameters  map[string]string
+	HttpMethod      string
+	RequestBody     interface{}
+	QueryParams     *WsQueryParams
+	BindingErors    []string
+	FrameworkErrors []*WsFrameworkError
+}
+
+func (wsr *WsRequest) AddFrameworkError(f *WsFrameworkError) {
+	wsr.FrameworkErrors = append(wsr.FrameworkErrors, f)
 }
 
 type WsResponse struct {
 	HttpStatus int
 	Body       interface{}
 	Errors     *ServiceErrors
+}
+
+type WsFrameworkPhase int
+
+const (
+	Unmarshall = iota
+	QueryBind
+	PathBind
+)
+
+type WsFrameworkError struct {
+	Phase       WsFrameworkPhase
+	ClientField string
+	TargetField string
+	Message     string
+}
+
+func NewUnmarshallWsFrameworkError(message string) *WsFrameworkError {
+	f := new(WsFrameworkError)
+	f.Phase = Unmarshall
+	f.Message = message
+
+	return f
 }
 
 type WsRequestProcessor interface {
