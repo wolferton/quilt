@@ -1,6 +1,8 @@
 package ws
 
-import "net/http"
+import (
+	"net/http"
+)
 
 func NewWsResponse(errorFinder ServiceErrorFinder) *WsResponse {
 	r := new(WsResponse)
@@ -14,6 +16,7 @@ type WsRequest struct {
 	PathParameters map[string]string
 	HttpMethod     string
 	RequestBody    interface{}
+	QueryParams    *WsQueryParams
 }
 
 type WsResponse struct {

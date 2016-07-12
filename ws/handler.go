@@ -19,6 +19,7 @@ type WsHandler struct {
 	StatusDeterminer       HttpStatusCodeDeterminer
 	ErrorFinder            ServiceErrorFinder
 	RevealPanicDetails     bool
+	DisableQueryParsing    bool
 }
 
 func (wh *WsHandler) ProvideErrorFinder(finder ServiceErrorFinder) {
@@ -35,11 +36,15 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}()
 
 	logic := wh.Logic
-	jsonReq, err := wh.Unmarshaller.Unmarshall(req, logic)
+	wsReq, err := wh.Unmarshaller.Unmarshall(req, logic)
 
 	if err != nil {
 		wh.writeUnmarshallError(err, w)
 		return
+	}
+
+	if !wh.DisableQueryParsing {
+		wh.processQueryParams(req, wsReq)
 	}
 
 	var errors ServiceErrors
@@ -48,16 +53,23 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	validator, found := logic.(WsRequestValidator)
 
 	if found {
-		validator.Validate(&errors, jsonReq)
+		validator.Validate(&errors, wsReq)
 	}
 
 	if errors.HasErrors() {
 		wh.writeErrorResponse(&errors, w)
 	} else {
 
-		wh.process(jsonReq, w)
+		wh.process(wsReq, w)
 
 	}
+
+}
+
+func (wh *WsHandler) processQueryParams(req *http.Request, wsReq *WsRequest) {
+
+	values := req.URL.Query()
+	wsReq.QueryParams = NewWsQueryParams(values)
 
 }
 

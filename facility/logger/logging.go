@@ -120,7 +120,7 @@ func (lal *LevelAwareLogger) LogErrorf(format string, a ...interface{}) {
 
 func (lal *LevelAwareLogger) LogErrorfWithTrace(format string, a ...interface{}) {
 	trace := make([]byte, 2048)
-	runtime.Stack(trace, true)
+	runtime.Stack(trace, false)
 
 	format = format + "\n%s"
 	a = append(a, trace)
