@@ -83,30 +83,24 @@ func (sem *ServiceErrorManager) LoadErrors(definitions []interface{}) {
 
 func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor, protoComponents map[string]*ioc.ProtoComponent) {
 
-	if !config.BoolValue("facilities.serviceErrorManager.enabled") {
-		return
+	manager := new(ServiceErrorManager)
+	manager.FrameworkLogger = logManager.CreateLogger(serviceErrorManagerComponentName)
+	manager.PanicOnMissing = config.BoolValue("facilities.serviceErrorManager.PanicOnMissing")
+	managerProto := ioc.CreateProtoComponent(manager, serviceErrorManagerComponentName)
+	protoComponents[serviceErrorManagerComponentName] = managerProto
+
+	decorator := new(ServiceErrorConsumerDecorator)
+	decorator.ErrorSource = manager
+	decoratorProto := ioc.CreateProtoComponent(decorator, serviceErrorDecoratorComponentName)
+	protoComponents[serviceErrorDecoratorComponentName] = decoratorProto
+
+	definitions := config.StringVal("facilities.serviceErrorManager.ErrorDefintions")
+	errors := config.Array(definitions)
+
+	if errors == nil {
+		manager.FrameworkLogger.LogWarnf("No error definitions found at config path %s", definitions)
 	} else {
-
-		manager := new(ServiceErrorManager)
-		manager.FrameworkLogger = logManager.CreateLogger(serviceErrorManagerComponentName)
-		manager.PanicOnMissing = config.BoolValue("facilities.serviceErrorManager.PanicOnMissing")
-		managerProto := ioc.CreateProtoComponent(manager, serviceErrorManagerComponentName)
-		protoComponents[serviceErrorManagerComponentName] = managerProto
-
-		decorator := new(ServiceErrorConsumerDecorator)
-		decorator.ErrorSource = manager
-		decoratorProto := ioc.CreateProtoComponent(decorator, serviceErrorDecoratorComponentName)
-		protoComponents[serviceErrorDecoratorComponentName] = decoratorProto
-
-		definitions := config.StringVal("facilities.serviceErrorManager.ErrorDefintions")
-		errors := config.Array(definitions)
-
-		if errors == nil {
-			manager.FrameworkLogger.LogWarnf("No error definitions found at config path %s", definitions)
-		} else {
-			manager.LoadErrors(errors)
-		}
-
+		manager.LoadErrors(errors)
 	}
 }
 

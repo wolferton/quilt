@@ -6,9 +6,7 @@ import (
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/jsonmerger"
 	"github.com/wolferton/quilt/facility/logger"
-	"github.com/wolferton/quilt/facility/serviceerror"
 	"github.com/wolferton/quilt/ioc"
-	"github.com/wolferton/quilt/ws/json"
 	"os"
 	"os/signal"
 	"strings"
@@ -43,30 +41,19 @@ func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
 	params = i.parseArgs()
 
 	bootstrapLogLevel := logger.LogLevelFromLabel(params["logLevel"])
+	frameworkLoggingManager := BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
 
-	facilitiesInitialisor := new(FacilitiesInitialisor)
-
-	frameworkLoggingManager := facilitiesInitialisor.BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
 	i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
-
 	i.logger.LogInfof("Creating framework components")
 
+	facilitiesInitialisor := NewFacilitiesInitialisor(protoComponents, frameworkLoggingManager)
+
 	configAccessor := i.loadConfigIntoAccessor(params["config"], frameworkLoggingManager)
-	facilitiesInitialisor.ConfigAccessor = configAccessor
 
 	injectorLogger := frameworkLoggingManager.CreateLogger(configInjectorComponentName)
 	configInjector := config.ConfigInjector{injectorLogger, configAccessor}
 
-	facilitiesInitialisor.ConfigInjector = &configInjector
-	facilitiesInitialisor.UpdateFrameworkLogLevel()
-
-	facilitiesInitialisor.InitialiseApplicationLogger(protoComponents)
-	facilitiesInitialisor.InitialiseHttpServer(protoComponents)
-	facilitiesInitialisor.InitialiseQueryManager(protoComponents)
-	facilitiesInitialisor.InitialiseDatabaseAccessor(protoComponents)
-
-	json.InitialiseJsonHttp(frameworkLoggingManager, configAccessor, protoComponents)
-	serviceerror.InitialiseServiceErrorManager(frameworkLoggingManager, configAccessor, protoComponents)
+	facilitiesInitialisor.Initialise(configAccessor, &configInjector)
 
 	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
 
