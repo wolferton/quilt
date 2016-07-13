@@ -83,7 +83,7 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor, ci *confi
 }
 
 func (fi *FacilitiesInitialisor) updateFrameworkLogLevel() {
-	defaultLogLevelLabel := fi.ConfigAccessor.StringVal("facilities.frameworkLogger.defaultLogLevel")
+	defaultLogLevelLabel := fi.ConfigAccessor.StringVal("FrameworkLogger.DefaultLogLevel")
 	defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
 
 	fi.FrameworkLoggingManager.UpdateGlobalThreshold(defaultLogLevel)
@@ -92,10 +92,10 @@ func (fi *FacilitiesInitialisor) updateFrameworkLogLevel() {
 
 func (fi *FacilitiesInitialisor) initialiseApplicationLogger() {
 
-	defaultLogLevelLabel := fi.ConfigAccessor.StringVal("facilities.applicationLogger.defaultLogLevel")
+	defaultLogLevelLabel := fi.ConfigAccessor.StringVal("ApplicationLogger.DefaultLogLevel")
 	defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
 
-	initialLogLevelsByComponent := fi.ConfigAccessor.ObjectVal("facilities.applicationLogger.componentLogLevels")
+	initialLogLevelsByComponent := fi.ConfigAccessor.ObjectVal("ApplicationLogger.ComponentLogLevels")
 
 	applicationLoggingManager := logger.CreateComponentLoggerManager(defaultLogLevel, initialLogLevelsByComponent)
 	applicationLoggingMangagerProto := ioc.CreateProtoComponent(applicationLoggingManager, applicationLoggingManagerName)
