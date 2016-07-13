@@ -13,32 +13,35 @@ const jsonAbnormalResponseWriterComponentName = ioc.FrameworkPrefix + "JsonAbnor
 const jsonHandlerDecoratorComponentName = ioc.FrameworkPrefix + "JsonHandlerDecorator"
 const wsHttpStatusDeterminerComponentName = ioc.FrameworkPrefix + "HttpStatusDeterminer"
 
-func InitialiseJsonHttp(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor) []*ioc.ProtoComponent {
+func InitialiseJsonHttp(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor, protoComponents map[string]*ioc.ProtoComponent) {
 
 	if !config.BoolValue("facilities.jsonWs.enabled") {
-		return []*ioc.ProtoComponent{}
+		return
 	} else {
 
 		responseWriter := new(DefaultJsonResponseWriter)
 		responseWriter.FrameworkLogger = logManager.CreateLogger(jsonResponseWriterComponentName)
 		responseWriterProto := ioc.CreateProtoComponent(responseWriter, jsonResponseWriterComponentName)
+		protoComponents[jsonResponseWriterComponentName] = responseWriterProto
 
 		abnormalResponseWriter := new(DefaultAbnormalResponseWriter)
 		abnormalResponseWriter.FrameworkLogger = logManager.CreateLogger(jsonAbnormalResponseWriterComponentName)
 		abnormalResponseWriterProto := ioc.CreateProtoComponent(abnormalResponseWriter, jsonAbnormalResponseWriterComponentName)
+		protoComponents[jsonAbnormalResponseWriterComponentName] = abnormalResponseWriterProto
 
 		statusDeterminer := new(ws.DefaultHttpStatusCodeDeterminer)
 		statusDeterminerProto := ioc.CreateProtoComponent(statusDeterminer, wsHttpStatusDeterminerComponentName)
+		protoComponents[wsHttpStatusDeterminerComponentName] = statusDeterminerProto
 
 		jsonUnmarshaller := new(DefaultJsonUnmarshaller)
 		jsonUnmarshaller.FrameworkLogger = logManager.CreateLogger(jsonUnmarshallerComponentName)
 		jsonUnmarshallerProto := ioc.CreateProtoComponent(jsonUnmarshaller, jsonUnmarshallerComponentName)
+		protoComponents[jsonUnmarshallerComponentName] = jsonUnmarshallerProto
 
 		decoratorLogger := logManager.CreateLogger(jsonHandlerDecoratorComponentName)
 		decorator := JsonWsHandlerDecorator{decoratorLogger, responseWriter, abnormalResponseWriter, statusDeterminer, jsonUnmarshaller}
 		decoratorProto := ioc.CreateProtoComponent(&decorator, jsonHandlerDecoratorComponentName)
-
-		return []*ioc.ProtoComponent{responseWriterProto, abnormalResponseWriterProto, statusDeterminerProto, jsonUnmarshallerProto, decoratorProto}
+		protoComponents[jsonHandlerDecoratorComponentName] = decoratorProto
 	}
 }
 

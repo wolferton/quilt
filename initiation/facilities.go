@@ -24,14 +24,16 @@ type FacilitiesInitialisor struct {
 	FrameworkLoggingManager *logger.ComponentLoggerManager
 }
 
-func (fi *FacilitiesInitialisor) BootstrapFrameworkLogging(protoComponents []*ioc.ProtoComponent, bootStrapLogLevel int) ([]*ioc.ProtoComponent, *logger.ComponentLoggerManager) {
+func (fi *FacilitiesInitialisor) BootstrapFrameworkLogging(protoComponents map[string]*ioc.ProtoComponent, bootStrapLogLevel int) *logger.ComponentLoggerManager {
 
-	frameworkLoggingManager := logger.CreateComponentLoggerManager(bootStrapLogLevel, nil)
-	frameworkLoggingManagerProto := ioc.CreateProtoComponent(frameworkLoggingManager, frameworkLoggingManagerName)
+	flm := logger.CreateComponentLoggerManager(bootStrapLogLevel, nil)
+	proto := ioc.CreateProtoComponent(flm, frameworkLoggingManagerName)
 
-	fi.FrameworkLoggingManager = frameworkLoggingManager
+	fi.FrameworkLoggingManager = flm
 
-	return append(protoComponents, frameworkLoggingManagerProto), frameworkLoggingManager
+	protoComponents[frameworkLoggingManagerName] = proto
+
+	return flm
 
 }
 
@@ -43,7 +45,7 @@ func (fi *FacilitiesInitialisor) UpdateFrameworkLogLevel() {
 	fi.FrameworkLoggingManager.UpdateLocalThreshold(defaultLogLevel)
 }
 
-func (fi *FacilitiesInitialisor) InitialiseApplicationLogger(protoComponents []*ioc.ProtoComponent) []*ioc.ProtoComponent {
+func (fi *FacilitiesInitialisor) InitialiseApplicationLogger(protoComponents map[string]*ioc.ProtoComponent) {
 
 	defaultLogLevelLabel := fi.ConfigAccessor.StringVal("facilities.applicationLogger.defaultLogLevel")
 	defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
@@ -51,37 +53,35 @@ func (fi *FacilitiesInitialisor) InitialiseApplicationLogger(protoComponents []*
 	initialLogLevelsByComponent := fi.ConfigAccessor.ObjectVal("facilities.applicationLogger.componentLogLevels")
 
 	applicationLoggingManager := logger.CreateComponentLoggerManager(defaultLogLevel, initialLogLevelsByComponent)
-
 	applicationLoggingMangagerProto := ioc.CreateProtoComponent(applicationLoggingManager, applicationLoggingManagerName)
-	protoComponents = append(protoComponents, applicationLoggingMangagerProto)
+	protoComponents[applicationLoggingManagerName] = applicationLoggingMangagerProto
 
 	applicationLoggingDecorator := new(decorator.ApplicationLogDecorator)
 	applicationLoggingDecorator.LoggerManager = applicationLoggingManager
-
-	applicationLoggingDecorator.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger("ApplicationLogDecorator")
-
+	applicationLoggingDecorator.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(applicationLoggingDecoratorName)
 	applicationLoggingDecoratorProto := ioc.CreateProtoComponent(applicationLoggingDecorator, applicationLoggingDecoratorName)
 
-	return append(protoComponents, applicationLoggingDecoratorProto)
+	protoComponents[applicationLoggingDecoratorName] = applicationLoggingDecoratorProto
+
 }
 
-func (fi *FacilitiesInitialisor) InitialiseHttpServer(protoComponents []*ioc.ProtoComponent, configAccessor *config.ConfigAccessor, frameworkLoggingManager *logger.ComponentLoggerManager) []*ioc.ProtoComponent {
+func (fi *FacilitiesInitialisor) InitialiseHttpServer(protoComponents map[string]*ioc.ProtoComponent) {
 
-	if !configAccessor.BoolValue("facilities.httpServer.enabled") {
-		return protoComponents
+	if !fi.ConfigAccessor.BoolValue("facilities.httpServer.enabled") {
+		return
 	}
 
 	httpServerConfig := httpserver.ParseDefaultHttpServerConfig(fi.ConfigInjector)
 
 	httpServer := new(httpserver.QuiltHttpServer)
 	httpServer.Config = httpServerConfig
-	httpServer.Logger = frameworkLoggingManager.CreateLogger(httpServerName)
+	httpServer.Logger = fi.FrameworkLoggingManager.CreateLogger(httpServerName)
 
 	proto := ioc.CreateProtoComponent(httpServer, httpServerName)
-	protoComponents = append(protoComponents, proto)
+	protoComponents[httpServerName] = proto
 
-	if !configAccessor.BoolValue("facilities.httpServer.accessLog.enabled") {
-		return protoComponents
+	if !fi.ConfigAccessor.BoolValue("facilities.httpServer.accessLog.enabled") {
+		return
 	}
 
 	accessLogWriter := new(httpserver.AccessLogWriter)
@@ -90,14 +90,13 @@ func (fi *FacilitiesInitialisor) InitialiseHttpServer(protoComponents []*ioc.Pro
 	httpServer.AccessLogWriter = accessLogWriter
 
 	proto = ioc.CreateProtoComponent(accessLogWriter, accessLogWriterName)
-	protoComponents = append(protoComponents, proto)
+	protoComponents[accessLogWriterName] = proto
 
-	return protoComponents
 }
 
-func (fi *FacilitiesInitialisor) InitialiseQueryManager(protoComponents []*ioc.ProtoComponent) []*ioc.ProtoComponent {
+func (fi *FacilitiesInitialisor) InitialiseQueryManager(protoComponents map[string]*ioc.ProtoComponent) {
 	if !fi.ConfigAccessor.BoolValue("facilities.queryManager.enabled") {
-		return protoComponents
+		return
 	} else {
 
 		queryManager := new(querymanager.QueryManager)
@@ -105,14 +104,13 @@ func (fi *FacilitiesInitialisor) InitialiseQueryManager(protoComponents []*ioc.P
 		fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.queryManager", queryManager)
 
 		proto := ioc.CreateProtoComponent(queryManager, queryManagerName)
-
-		return append(protoComponents, proto)
+		protoComponents[queryManagerName] = proto
 	}
 }
 
-func (fi *FacilitiesInitialisor) InitialiseDatabaseAccessor(protoComponents []*ioc.ProtoComponent) []*ioc.ProtoComponent {
+func (fi *FacilitiesInitialisor) InitialiseDatabaseAccessor(protoComponents map[string]*ioc.ProtoComponent) {
 	if !fi.ConfigAccessor.BoolValue("facilities.rdbmsAccess.enabled") {
-		return protoComponents
+		return
 	} else {
 
 		manager := new(rdbms.DefaultRdbmsClientManager)
@@ -124,6 +122,17 @@ func (fi *FacilitiesInitialisor) InitialiseDatabaseAccessor(protoComponents []*i
 		proto.AddDependency("Provider", manager.DatabaseProviderComponentName)
 		proto.AddDependency("QueryManager", queryManagerName)
 
-		return append(protoComponents, proto)
+		protoComponents[rdbmsClientManagerName] = proto
+
 	}
+}
+
+type FacilityConfig struct {
+	HttpServer          bool
+	JsonWs              bool
+	FrameworkLogging    bool
+	ApplicationLogging  bool
+	QueryManager        bool
+	RdbmsAccess         bool
+	ServiceErrorManager bool
 }

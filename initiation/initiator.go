@@ -24,7 +24,7 @@ type Initiator struct {
 	logger logger.Logger
 }
 
-func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
+func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
 
 	start := time.Now()
 
@@ -34,13 +34,19 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 	}
 
 	var params map[string]string
+	protoComponents := make(map[string]*ioc.ProtoComponent)
+
+	for _, c := range customComponents {
+		protoComponents[c.Component.Name] = c
+	}
+
 	params = i.parseArgs()
 
 	bootstrapLogLevel := logger.LogLevelFromLabel(params["logLevel"])
 
 	facilitiesInitialisor := new(FacilitiesInitialisor)
 
-	protoComponents, frameworkLoggingManager := facilitiesInitialisor.BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
+	frameworkLoggingManager := facilitiesInitialisor.BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
 	i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
 
 	i.logger.LogInfof("Creating framework components")
@@ -54,13 +60,13 @@ func (i *Initiator) Start(protoComponents []*ioc.ProtoComponent) {
 	facilitiesInitialisor.ConfigInjector = &configInjector
 	facilitiesInitialisor.UpdateFrameworkLogLevel()
 
-	protoComponents = facilitiesInitialisor.InitialiseApplicationLogger(protoComponents)
-	protoComponents = facilitiesInitialisor.InitialiseHttpServer(protoComponents, configAccessor, frameworkLoggingManager)
-	protoComponents = facilitiesInitialisor.InitialiseQueryManager(protoComponents)
-	protoComponents = facilitiesInitialisor.InitialiseDatabaseAccessor(protoComponents)
+	facilitiesInitialisor.InitialiseApplicationLogger(protoComponents)
+	facilitiesInitialisor.InitialiseHttpServer(protoComponents)
+	facilitiesInitialisor.InitialiseQueryManager(protoComponents)
+	facilitiesInitialisor.InitialiseDatabaseAccessor(protoComponents)
 
-	protoComponents = append(protoComponents, json.InitialiseJsonHttp(frameworkLoggingManager, configAccessor)...)
-	protoComponents = append(protoComponents, serviceerror.InitialiseServiceErrorManager(frameworkLoggingManager, configAccessor)...)
+	json.InitialiseJsonHttp(frameworkLoggingManager, configAccessor, protoComponents)
+	serviceerror.InitialiseServiceErrorManager(frameworkLoggingManager, configAccessor, protoComponents)
 
 	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
 

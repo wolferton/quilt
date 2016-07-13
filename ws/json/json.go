@@ -74,7 +74,7 @@ func (djerw *DefaultAbnormalResponseWriter) WriteWithErrors(status int, errors *
 
 	_, err = w.Write(data)
 
-	w.WriteHeader(status)
+	//w.WriteHeader(status)
 
 	return err
 }

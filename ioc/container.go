@@ -188,7 +188,7 @@ func (cc *ComponentContainer) countNotReady(warn bool) int {
 	return notReady
 }
 
-func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, configAccessor *config.ConfigAccessor) {
+func (cc *ComponentContainer) Populate(protoComponents map[string]*ProtoComponent, configAccessor *config.ConfigAccessor) {
 
 	decorators := make([]ComponentDecorator, 1)
 
@@ -200,11 +200,11 @@ func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, config
 	cc.allComponents = make(map[string]*Component)
 	cc.componentsByType = make(map[string][]interface{})
 
-	for index, protoComponent := range protoComponents {
+	for _, protoComponent := range protoComponents {
 
 		component := protoComponent.Component
 
-		cc.addComponent(component, index)
+		cc.addComponent(component)
 		decorators = cc.captureDecorator(component, decorators)
 
 	}
@@ -220,7 +220,7 @@ func (cc *ComponentContainer) Populate(protoComponents []*ProtoComponent, config
 	cc.decorateComponents(decorators)
 }
 
-func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents []*ProtoComponent, configAccessor *config.ConfigAccessor) error {
+func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents map[string]*ProtoComponent, configAccessor *config.ConfigAccessor) error {
 
 	fl := cc.FrameworkLogger
 
@@ -287,7 +287,7 @@ func (cc *ComponentContainer) captureDecorator(component *Component, decorators 
 	}
 }
 
-func (cc *ComponentContainer) addComponent(component *Component, index int) {
+func (cc *ComponentContainer) addComponent(component *Component) {
 	cc.allComponents[component.Name] = component
 	cc.mapComponentToType(component)
 
@@ -341,7 +341,7 @@ func (cc *ComponentContainer) mapComponentToType(component *Component) {
 
 }
 
-func CreateContainer(protoComponents []*ProtoComponent, loggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor, configInjector *config.ConfigInjector) *ComponentContainer {
+func CreateContainer(protoComponents map[string]*ProtoComponent, loggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor, configInjector *config.ConfigInjector) *ComponentContainer {
 
 	container := new(ComponentContainer)
 	container.FrameworkLogger = loggingManager.CreateLogger(containerComponentName)

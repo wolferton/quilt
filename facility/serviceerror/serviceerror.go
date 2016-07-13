@@ -81,20 +81,22 @@ func (sem *ServiceErrorManager) LoadErrors(definitions []interface{}) {
 	}
 }
 
-func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor) []*ioc.ProtoComponent {
+func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor, protoComponents map[string]*ioc.ProtoComponent) {
 
 	if !config.BoolValue("facilities.serviceErrorManager.enabled") {
-		return []*ioc.ProtoComponent{}
+		return
 	} else {
 
 		manager := new(ServiceErrorManager)
 		manager.FrameworkLogger = logManager.CreateLogger(serviceErrorManagerComponentName)
 		manager.PanicOnMissing = config.BoolValue("facilities.serviceErrorManager.PanicOnMissing")
 		managerProto := ioc.CreateProtoComponent(manager, serviceErrorManagerComponentName)
+		protoComponents[serviceErrorManagerComponentName] = managerProto
 
 		decorator := new(ServiceErrorConsumerDecorator)
 		decorator.ErrorSource = manager
 		decoratorProto := ioc.CreateProtoComponent(decorator, serviceErrorDecoratorComponentName)
+		protoComponents[serviceErrorDecoratorComponentName] = decoratorProto
 
 		definitions := config.StringVal("facilities.serviceErrorManager.ErrorDefintions")
 		errors := config.Array(definitions)
@@ -105,7 +107,6 @@ func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, co
 			manager.LoadErrors(errors)
 		}
 
-		return []*ioc.ProtoComponent{managerProto, decoratorProto}
 	}
 }
 
