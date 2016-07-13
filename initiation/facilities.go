@@ -112,21 +112,20 @@ func (fi *FacilitiesInitialisor) initialiseApplicationLogger() {
 
 func (fi *FacilitiesInitialisor) initialiseHttpServer() {
 
-	httpServerConfig := httpserver.ParseDefaultHttpServerConfig(fi.ConfigInjector)
-
 	httpServer := new(httpserver.QuiltHttpServer)
-	httpServer.Config = httpServerConfig
+	fi.ConfigInjector.PopulateObjectFromJsonPath("HttpServer", httpServer)
+
 	httpServer.Logger = fi.FrameworkLoggingManager.CreateLogger(httpServerName)
 
 	proto := ioc.CreateProtoComponent(httpServer, httpServerName)
 	fi.protoComponents[httpServerName] = proto
 
-	if !fi.ConfigAccessor.BoolValue("facilities.httpServer.accessLog.enabled") {
+	if !httpServer.AccessLogging {
 		return
 	}
 
 	accessLogWriter := new(httpserver.AccessLogWriter)
-	fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.httpServer.accessLog", accessLogWriter)
+	fi.ConfigInjector.PopulateObjectFromJsonPath("HttpServer.AccessLog", accessLogWriter)
 
 	httpServer.AccessLogWriter = accessLogWriter
 

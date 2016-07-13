@@ -2,7 +2,6 @@ package httpserver
 
 import (
 	"fmt"
-	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
 	"net/http"
@@ -10,19 +9,20 @@ import (
 	"time"
 )
 
-const defaultHttpServerConfigBase = "facilities.httpServer"
-
 type RegisteredProvider struct {
 	Provider HttpEndpointProvider
 	Pattern  *regexp.Regexp
 }
 
 type QuiltHttpServer struct {
-	Config                      HttpServerConfig
 	registeredProvidersByMethod map[string][]*RegisteredProvider
 	componentContainer          *ioc.ComponentContainer
 	Logger                      logger.Logger
 	AccessLogWriter             *AccessLogWriter
+	AccessLogging               bool
+	Port                        int
+	ContentType                 string
+	Encoding                    string
 }
 
 func (qhs *QuiltHttpServer) Container(container *ioc.ComponentContainer) {
@@ -78,11 +78,11 @@ func (qhs *QuiltHttpServer) StartComponent() error {
 func (qhs *QuiltHttpServer) AllowAccess() error {
 	http.Handle("/", http.HandlerFunc(qhs.handleAll))
 
-	listenAddress := fmt.Sprintf(":%d", qhs.Config.Port)
+	listenAddress := fmt.Sprintf(":%d", qhs.Port)
 
 	go http.ListenAndServe(listenAddress, nil)
 
-	qhs.Logger.LogInfof("HTTP server started listening on %d", qhs.Config.Port)
+	qhs.Logger.LogInfof("HTTP server started listening on %d", qhs.Port)
 
 	return nil
 }
@@ -92,7 +92,7 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 	received := time.Now()
 	matched := false
 
-	contentType := fmt.Sprintf("%s; charset=%s", h.Config.ContentType, h.Config.Encoding)
+	contentType := fmt.Sprintf("%s; charset=%s", h.ContentType, h.Encoding)
 	responseWriter.Header().Set("Content-Type", contentType)
 
 	providersByMethod := h.registeredProvidersByMethod[request.Method]
@@ -121,7 +121,7 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 		h.handleNotFound(request, wrw)
 	}
 
-	if h.AccessLogWriter != nil {
+	if h.AccessLogging {
 		finished := time.Now()
 		h.AccessLogWriter.LogRequest(request, wrw, &received, &finished, nil)
 	}
@@ -132,24 +132,6 @@ func (h *QuiltHttpServer) handleNotFound(req *http.Request, res *wrappedResponse
 
 	http.NotFound(res, req)
 
-}
-
-type HttpServerConfig struct {
-	Port        int
-	ContentType string
-	Encoding    string
-}
-
-func ParseDefaultHttpServerConfig(injector *config.ConfigInjector) HttpServerConfig {
-	return ParseHttpServerConfig(injector, defaultHttpServerConfigBase)
-}
-
-func ParseHttpServerConfig(injector *config.ConfigInjector, baseConfigPath string) HttpServerConfig {
-
-	var httpServerConfig HttpServerConfig
-	injector.PopulateObjectFromJsonPath(baseConfigPath, &httpServerConfig)
-
-	return httpServerConfig
 }
 
 type wrappedResponseWriter struct {
