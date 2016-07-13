@@ -64,6 +64,7 @@ type DefaultAbnormalResponseWriter struct {
 
 func (djerw *DefaultAbnormalResponseWriter) WriteWithErrors(status int, errors *ws.ServiceErrors, w http.ResponseWriter) error {
 
+	w.WriteHeader(status)
 	wrapper := wrapJsonResponse(djerw.formatErrors(errors), nil)
 
 	data, err := json.Marshal(wrapper)
@@ -73,8 +74,6 @@ func (djerw *DefaultAbnormalResponseWriter) WriteWithErrors(status int, errors *
 	}
 
 	_, err = w.Write(data)
-
-	//w.WriteHeader(status)
 
 	return err
 }
