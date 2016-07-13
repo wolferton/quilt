@@ -63,8 +63,6 @@ func (qp *WsQueryParams) noVal(key string) error {
 	return errors.New(message)
 }
 
-func BindQueryParams(target interface{}, qp *WsQueryParams, req *WsRequest, bindings map[string]string) error {
-
-	return nil
+func BindQueryParams(qp *WsQueryParams, req *WsRequest, bindings map[string]string) {
 
 }

@@ -7,11 +7,11 @@ import (
 	"github.com/wolferton/quilt/ws"
 )
 
-const jsonResponseWriterComponentName = "quiltJsonResponseWriter"
-const jsonUnmarshallerComponentName = "quiltJsonUnmarshaller"
-const jsonErrorResponseWriterComponentName = "quiltJsonErrorResponseWriter"
-const jsonHandlerDecoratorComponentName = "quiltJsonHandlerDecorator"
-const wsHttpStatusDeterminerComponentName = "quiltHttpStatusDeterminer"
+const jsonResponseWriterComponentName = ioc.FrameworkPrefix + "JsonResponseWriter"
+const jsonUnmarshallerComponentName = ioc.FrameworkPrefix + "JsonUnmarshaller"
+const jsonAbnormalResponseWriterComponentName = ioc.FrameworkPrefix + "JsonAbnormalResponseWriter"
+const jsonHandlerDecoratorComponentName = ioc.FrameworkPrefix + "JsonHandlerDecorator"
+const wsHttpStatusDeterminerComponentName = ioc.FrameworkPrefix + "HttpStatusDeterminer"
 
 func InitialiseJsonHttp(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor) []*ioc.ProtoComponent {
 
@@ -23,9 +23,9 @@ func InitialiseJsonHttp(logManager *logger.ComponentLoggerManager, config *confi
 		responseWriter.FrameworkLogger = logManager.CreateLogger(jsonResponseWriterComponentName)
 		responseWriterProto := ioc.CreateProtoComponent(responseWriter, jsonResponseWriterComponentName)
 
-		responseErrorWriter := new(DefaultJsonErrorResponseWriter)
-		responseErrorWriter.FrameworkLogger = logManager.CreateLogger(jsonErrorResponseWriterComponentName)
-		responseErrorWriterProto := ioc.CreateProtoComponent(responseErrorWriter, jsonErrorResponseWriterComponentName)
+		abnormalResponseWriter := new(DefaultAbnormalResponseWriter)
+		abnormalResponseWriter.FrameworkLogger = logManager.CreateLogger(jsonAbnormalResponseWriterComponentName)
+		abnormalResponseWriterProto := ioc.CreateProtoComponent(abnormalResponseWriter, jsonAbnormalResponseWriterComponentName)
 
 		statusDeterminer := new(ws.DefaultHttpStatusCodeDeterminer)
 		statusDeterminerProto := ioc.CreateProtoComponent(statusDeterminer, wsHttpStatusDeterminerComponentName)
@@ -35,17 +35,17 @@ func InitialiseJsonHttp(logManager *logger.ComponentLoggerManager, config *confi
 		jsonUnmarshallerProto := ioc.CreateProtoComponent(jsonUnmarshaller, jsonUnmarshallerComponentName)
 
 		decoratorLogger := logManager.CreateLogger(jsonHandlerDecoratorComponentName)
-		decorator := JsonWsHandlerDecorator{decoratorLogger, responseWriter, responseErrorWriter, statusDeterminer, jsonUnmarshaller}
+		decorator := JsonWsHandlerDecorator{decoratorLogger, responseWriter, abnormalResponseWriter, statusDeterminer, jsonUnmarshaller}
 		decoratorProto := ioc.CreateProtoComponent(&decorator, jsonHandlerDecoratorComponentName)
 
-		return []*ioc.ProtoComponent{responseWriterProto, responseErrorWriterProto, statusDeterminerProto, jsonUnmarshallerProto, decoratorProto}
+		return []*ioc.ProtoComponent{responseWriterProto, abnormalResponseWriterProto, statusDeterminerProto, jsonUnmarshallerProto, decoratorProto}
 	}
 }
 
 type JsonWsHandlerDecorator struct {
 	FrameworkLogger      logger.Logger
 	ResponseWriter       ws.WsResponseWriter
-	ErrorResponseWriter  ws.WsErrorResponseWriter
+	ErrorResponseWriter  ws.WsAbnormalResponseWriter
 	StatusCodeDeterminer ws.HttpStatusCodeDeterminer
 	Unmarshaller         ws.WsUnmarshaller
 }

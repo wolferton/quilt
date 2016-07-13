@@ -14,7 +14,7 @@ type WsHandler struct {
 	PathMatchPattern       string
 	Logic                  WsRequestProcessor
 	ResponseWriter         WsResponseWriter
-	ErrorResponseWriter    WsErrorResponseWriter
+	ErrorResponseWriter    WsAbnormalResponseWriter
 	QuiltApplicationLogger logger.Logger
 	StatusDeterminer       HttpStatusCodeDeterminer
 	ErrorFinder            ServiceErrorFinder
@@ -150,8 +150,7 @@ func (wh *WsHandler) writeErrorResponse(errors *ServiceErrors, w http.ResponseWr
 
 	status := wh.StatusDeterminer.DetermineCodeFromErrors(errors)
 
-	w.WriteHeader(status)
-	err := wh.ErrorResponseWriter.Write(errors, w)
+	err := wh.ErrorResponseWriter.WriteWithErrors(status, errors, w)
 
 	if err != nil {
 		l.LogErrorf("Problem writing an HTTP response that was already in error", err)

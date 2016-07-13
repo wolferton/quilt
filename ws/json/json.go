@@ -58,11 +58,11 @@ func (djrw *DefaultJsonResponseWriter) Write(res *ws.WsResponse, w http.Response
 	return err
 }
 
-type DefaultJsonErrorResponseWriter struct {
+type DefaultAbnormalResponseWriter struct {
 	FrameworkLogger logger.Logger
 }
 
-func (djerw *DefaultJsonErrorResponseWriter) Write(errors *ws.ServiceErrors, w http.ResponseWriter) error {
+func (djerw *DefaultAbnormalResponseWriter) WriteWithErrors(status int, errors *ws.ServiceErrors, w http.ResponseWriter) error {
 
 	wrapper := wrapJsonResponse(djerw.formatErrors(errors), nil)
 
@@ -74,10 +74,12 @@ func (djerw *DefaultJsonErrorResponseWriter) Write(errors *ws.ServiceErrors, w h
 
 	_, err = w.Write(data)
 
+	w.WriteHeader(status)
+
 	return err
 }
 
-func (djerw *DefaultJsonErrorResponseWriter) formatErrors(errors *ws.ServiceErrors) interface{} {
+func (djerw *DefaultAbnormalResponseWriter) formatErrors(errors *ws.ServiceErrors) interface{} {
 
 	f := make(map[string]string)
 
