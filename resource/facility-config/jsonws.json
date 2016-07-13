@@ -1,13 +1,10 @@
 {
-  "facilities":{
-    "jsonWs":{
-      "enabled": false,
-      "responseWrapping": {
-        "Wrap": true,
-        "IncludeEmptySections": false,
-        "ContentLabel": "Response",
-        "ErrorsLabel": "Errors"
-      }
+  "JsonWs":{
+    "ResponseWrapping": {
+      "Wrap": true,
+      "IncludeEmptySections": false,
+      "ContentLabel": "Response",
+      "ErrorsLabel": "Errors"
     }
   }
 }

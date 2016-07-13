@@ -137,7 +137,7 @@ func (fi *FacilitiesInitialisor) initialiseHttpServer() {
 func (fi *FacilitiesInitialisor) initialiseQueryManager() {
 	queryManager := new(querymanager.QueryManager)
 	queryManager.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(queryManagerName)
-	fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.queryManager", queryManager)
+	fi.ConfigInjector.PopulateObjectFromJsonPath("QueryManager", queryManager)
 
 	proto := ioc.CreateProtoComponent(queryManager, queryManagerName)
 	fi.protoComponents[queryManagerName] = proto
@@ -146,7 +146,7 @@ func (fi *FacilitiesInitialisor) initialiseQueryManager() {
 func (fi *FacilitiesInitialisor) initialiseDatabaseAccessor() {
 	manager := new(rdbms.DefaultRdbmsClientManager)
 	manager.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(rdbmsClientManagerName)
-	fi.ConfigInjector.PopulateObjectFromJsonPath("facilities.rdbmsAccess", manager)
+	fi.ConfigInjector.PopulateObjectFromJsonPath("RdbmsAccess", manager)
 
 	proto := ioc.CreateProtoComponent(manager, rdbmsClientManagerName)
 

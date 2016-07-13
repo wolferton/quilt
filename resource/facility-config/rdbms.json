@@ -1,8 +1,5 @@
 {
-  "facilities":{
-    "rdbmsAccess":{
-      "enabled": false,
-      "DatabaseProviderComponentName": "databaseProvider"
-    }
+  "RdbmsAccess":{
+    "DatabaseProviderComponentName": "databaseProvider"
   }
 }

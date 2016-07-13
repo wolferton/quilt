@@ -85,7 +85,7 @@ func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, co
 
 	manager := new(ServiceErrorManager)
 	manager.FrameworkLogger = logManager.CreateLogger(serviceErrorManagerComponentName)
-	manager.PanicOnMissing = config.BoolValue("facilities.serviceErrorManager.PanicOnMissing")
+	manager.PanicOnMissing = config.BoolValue("ServiceErrorManager.PanicOnMissing")
 	managerProto := ioc.CreateProtoComponent(manager, serviceErrorManagerComponentName)
 	protoComponents[serviceErrorManagerComponentName] = managerProto
 
@@ -94,7 +94,7 @@ func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, co
 	decoratorProto := ioc.CreateProtoComponent(decorator, serviceErrorDecoratorComponentName)
 	protoComponents[serviceErrorDecoratorComponentName] = decoratorProto
 
-	definitions := config.StringVal("facilities.serviceErrorManager.ErrorDefintions")
+	definitions := config.StringVal("ServiceErrorManager.ErrorDefinitions")
 	errors := config.Array(definitions)
 
 	if errors == nil {
