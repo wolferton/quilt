@@ -14,10 +14,10 @@ type RegisteredProvider struct {
 	Pattern  *regexp.Regexp
 }
 
-type QuiltHttpServer struct {
+type HttpServer struct {
 	registeredProvidersByMethod map[string][]*RegisteredProvider
 	componentContainer          *ioc.ComponentContainer
-	Logger                      logger.Logger
+	FrameworkLogger             logger.Logger
 	AccessLogWriter             *AccessLogWriter
 	AccessLogging               bool
 	Port                        int
@@ -25,11 +25,11 @@ type QuiltHttpServer struct {
 	Encoding                    string
 }
 
-func (qhs *QuiltHttpServer) Container(container *ioc.ComponentContainer) {
-	qhs.componentContainer = container
+func (hs *HttpServer) Container(container *ioc.ComponentContainer) {
+	hs.componentContainer = container
 }
 
-func (qhs *QuiltHttpServer) registerProvider(endPointProvider HttpEndpointProvider) {
+func (hs *HttpServer) registerProvider(endPointProvider HttpEndpointProvider) {
 
 	for _, method := range endPointProvider.SupportedHttpMethods() {
 
@@ -37,37 +37,37 @@ func (qhs *QuiltHttpServer) registerProvider(endPointProvider HttpEndpointProvid
 		compiledRegex, regexError := regexp.Compile(pattern)
 
 		if regexError != nil {
-			qhs.Logger.LogErrorf("Unable to compile regular expression from pattern %s: %s", pattern, regexError.Error())
+			hs.FrameworkLogger.LogErrorf("Unable to compile regular expression from pattern %s: %s", pattern, regexError.Error())
 		}
 
-		qhs.Logger.LogTracef("Registering %s %s", pattern, method)
+		hs.FrameworkLogger.LogTracef("Registering %s %s", pattern, method)
 
 		rp := RegisteredProvider{endPointProvider, compiledRegex}
 
-		providersForMethod := qhs.registeredProvidersByMethod[method]
+		providersForMethod := hs.registeredProvidersByMethod[method]
 
 		if providersForMethod == nil {
 			providersForMethod = make([]*RegisteredProvider, 1)
 			providersForMethod[0] = &rp
-			qhs.registeredProvidersByMethod[method] = providersForMethod
+			hs.registeredProvidersByMethod[method] = providersForMethod
 		} else {
-			qhs.registeredProvidersByMethod[method] = append(providersForMethod, &rp)
+			hs.registeredProvidersByMethod[method] = append(providersForMethod, &rp)
 		}
 	}
 
 }
 
-func (qhs *QuiltHttpServer) StartComponent() error {
+func (hs *HttpServer) StartComponent() error {
 
-	qhs.registeredProvidersByMethod = make(map[string][]*RegisteredProvider)
+	hs.registeredProvidersByMethod = make(map[string][]*RegisteredProvider)
 
-	for name, component := range qhs.componentContainer.AllComponents() {
+	for name, component := range hs.componentContainer.AllComponents() {
 		provider, found := component.Instance.(HttpEndpointProvider)
 
 		if found {
-			qhs.Logger.LogDebugf("Found HttpEndpointProvider %s", name)
+			hs.FrameworkLogger.LogDebugf("Found HttpEndpointProvider %s", name)
 
-			qhs.registerProvider(provider)
+			hs.registerProvider(provider)
 
 		}
 	}
@@ -75,19 +75,19 @@ func (qhs *QuiltHttpServer) StartComponent() error {
 	return nil
 }
 
-func (qhs *QuiltHttpServer) AllowAccess() error {
-	http.Handle("/", http.HandlerFunc(qhs.handleAll))
+func (hs *HttpServer) AllowAccess() error {
+	http.Handle("/", http.HandlerFunc(hs.handleAll))
 
-	listenAddress := fmt.Sprintf(":%d", qhs.Port)
+	listenAddress := fmt.Sprintf(":%d", hs.Port)
 
 	go http.ListenAndServe(listenAddress, nil)
 
-	qhs.Logger.LogInfof("HTTP server started listening on %d", qhs.Port)
+	hs.FrameworkLogger.LogInfof("HTTP server started listening on %d", hs.Port)
 
 	return nil
 }
 
-func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *HttpServer) handleAll(responseWriter http.ResponseWriter, request *http.Request) {
 
 	received := time.Now()
 	matched := false
@@ -99,7 +99,7 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 
 	path := request.URL.Path
 
-	h.Logger.LogTracef("Finding provider to handle %s %s from %d providers", path, request.Method, len(providersByMethod))
+	h.FrameworkLogger.LogTracef("Finding provider to handle %s %s from %d providers", path, request.Method, len(providersByMethod))
 
 	wrw := new(wrappedResponseWriter)
 	wrw.rw = responseWriter
@@ -108,10 +108,10 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 
 		pattern := handlerPattern.Pattern
 
-		h.Logger.LogTracef("Testing %s", pattern.String())
+		h.FrameworkLogger.LogTracef("Testing %s", pattern.String())
 
 		if pattern.MatchString(path) {
-			h.Logger.LogTracef("Matches %s", pattern.String())
+			h.FrameworkLogger.LogTracef("Matches %s", pattern.String())
 			matched = true
 			handlerPattern.Provider.ServeHTTP(wrw, request)
 		}
@@ -128,7 +128,7 @@ func (h *QuiltHttpServer) handleAll(responseWriter http.ResponseWriter, request 
 
 }
 
-func (h *QuiltHttpServer) handleNotFound(req *http.Request, res *wrappedResponseWriter) {
+func (h *HttpServer) handleNotFound(req *http.Request, res *wrappedResponseWriter) {
 
 	http.NotFound(res, req)
 

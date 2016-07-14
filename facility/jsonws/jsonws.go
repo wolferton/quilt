@@ -1,10 +1,11 @@
-package json
+package jsonws
 
 import (
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
 	"github.com/wolferton/quilt/ws"
+	"github.com/wolferton/quilt/ws/json"
 )
 
 const jsonResponseWriterComponentName = ioc.FrameworkPrefix + "JsonResponseWriter"
@@ -18,19 +19,16 @@ type JsonWsFacilityBuilder struct {
 
 func (fb *JsonWsFacilityBuilder) BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
 
-	responseWriter := new(DefaultJsonResponseWriter)
-	responseWriter.FrameworkLogger = lm.CreateLogger(jsonResponseWriterComponentName)
+	responseWriter := new(json.DefaultJsonResponseWriter)
 	cn.WrapAndAddProto(jsonResponseWriterComponentName, responseWriter)
 
-	abnormalResponseWriter := new(DefaultAbnormalResponseWriter)
-	abnormalResponseWriter.FrameworkLogger = lm.CreateLogger(jsonAbnormalResponseWriterComponentName)
+	abnormalResponseWriter := new(json.DefaultAbnormalResponseWriter)
 	cn.WrapAndAddProto(jsonAbnormalResponseWriterComponentName, abnormalResponseWriter)
 
 	statusDeterminer := new(ws.DefaultHttpStatusCodeDeterminer)
 	cn.WrapAndAddProto(wsHttpStatusDeterminerComponentName, statusDeterminer)
 
-	jsonUnmarshaller := new(DefaultJsonUnmarshaller)
-	jsonUnmarshaller.FrameworkLogger = lm.CreateLogger(jsonUnmarshallerComponentName)
+	jsonUnmarshaller := new(json.DefaultJsonUnmarshaller)
 	cn.WrapAndAddProto(jsonUnmarshallerComponentName, jsonUnmarshaller)
 
 	decoratorLogger := lm.CreateLogger(jsonHandlerDecoratorComponentName)

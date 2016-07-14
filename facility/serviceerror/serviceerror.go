@@ -84,7 +84,6 @@ func (sem *ServiceErrorManager) LoadErrors(definitions []interface{}) {
 func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor, container *ioc.ComponentContainer) {
 
 	manager := new(ServiceErrorManager)
-	manager.FrameworkLogger = logManager.CreateLogger(serviceErrorManagerComponentName)
 	manager.PanicOnMissing = config.BoolValue("ServiceErrorManager.PanicOnMissing")
 	container.WrapAndAddProto(serviceErrorManagerComponentName, manager)
 

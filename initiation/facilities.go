@@ -4,16 +4,17 @@ import (
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/decorator"
 	"github.com/wolferton/quilt/facility/httpserver"
+	"github.com/wolferton/quilt/facility/jsonws"
 	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/facility/querymanager"
 	"github.com/wolferton/quilt/facility/rdbms"
 	"github.com/wolferton/quilt/facility/serviceerror"
 	"github.com/wolferton/quilt/ioc"
-	"github.com/wolferton/quilt/ws/json"
 )
 
 const applicationLoggingManagerName = ioc.FrameworkPrefix + "ApplicationLoggingManager"
 const frameworkLoggingManagerName = ioc.FrameworkPrefix + "FrameworkLoggingManager"
+const frameworkLoggerDecoratorName = ioc.FrameworkPrefix + "FrameworkLoggingDecorator"
 const applicationLoggingDecoratorName = ioc.FrameworkPrefix + "ApplicationLoggingDecorator"
 const httpServerName = ioc.FrameworkPrefix + "HttpServer"
 const accessLogWriterName = ioc.FrameworkPrefix + "AccessLogWriter"
@@ -66,7 +67,7 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 	}
 
 	if fc["JsonWs"].(bool) {
-		fb := new(json.JsonWsFacilityBuilder)
+		fb := new(jsonws.JsonWsFacilityBuilder)
 		fb.BuildAndRegister(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
 	}
 
@@ -77,11 +78,24 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 }
 
 func (fi *FacilitiesInitialisor) updateFrameworkLogLevel() {
+
+	flm := fi.FrameworkLoggingManager
+
 	defaultLogLevelLabel := fi.ConfigAccessor.StringVal("FrameworkLogger.DefaultLogLevel")
 	defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
 
-	fi.FrameworkLoggingManager.UpdateGlobalThreshold(defaultLogLevel)
-	fi.FrameworkLoggingManager.UpdateLocalThreshold(defaultLogLevel)
+	initialLogLevelsByComponent := fi.ConfigAccessor.ObjectVal("FrameworkLogger.ComponentLogLevels")
+
+	flm.InitalComponentLogLevels = initialLogLevelsByComponent
+	flm.UpdateGlobalThreshold(defaultLogLevel)
+	flm.UpdateLocalThreshold(defaultLogLevel)
+
+	fld := new(decorator.FrameworkLogDecorator)
+	fld.FrameworkLogger = flm.CreateLogger(frameworkLoggerDecoratorName)
+	fld.LoggerManager = flm
+
+	fi.container.WrapAndAddProto(frameworkLoggerDecoratorName, fld)
+
 }
 
 func (fi *FacilitiesInitialisor) initialiseApplicationLogger() {
@@ -108,10 +122,8 @@ func (fi *FacilitiesInitialisor) initialiseHttpServer() {
 
 	c := fi.container
 
-	httpServer := new(httpserver.QuiltHttpServer)
+	httpServer := new(httpserver.HttpServer)
 	fi.ConfigAccessor.Populate("HttpServer", httpServer)
-
-	httpServer.Logger = fi.FrameworkLoggingManager.CreateLogger(httpServerName)
 
 	c.WrapAndAddProto(httpServerName, httpServer)
 
@@ -130,7 +142,6 @@ func (fi *FacilitiesInitialisor) initialiseHttpServer() {
 
 func (fi *FacilitiesInitialisor) initialiseQueryManager() {
 	queryManager := new(querymanager.QueryManager)
-	queryManager.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(queryManagerName)
 	fi.ConfigAccessor.Populate("QueryManager", queryManager)
 
 	fi.container.WrapAndAddProto(queryManagerName, queryManager)
@@ -138,7 +149,6 @@ func (fi *FacilitiesInitialisor) initialiseQueryManager() {
 
 func (fi *FacilitiesInitialisor) initialiseDatabaseAccessor() {
 	manager := new(rdbms.DefaultRdbmsClientManager)
-	manager.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(rdbmsClientManagerName)
 	fi.ConfigAccessor.Populate("RdbmsAccess", manager)
 
 	proto := ioc.CreateProtoComponent(manager, rdbmsClientManagerName)
