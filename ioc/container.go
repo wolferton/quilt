@@ -15,6 +15,7 @@ const containerComponentName = "quiltContainer"
 
 type ComponentContainer struct {
 	allComponents    map[string]*Component
+	protoComponents  map[string]*ProtoComponent
 	componentsByType map[string][]interface{}
 	FrameworkLogger  logger.Logger
 	configAccessor   *config.ConfigAccessor
@@ -26,6 +27,24 @@ type ComponentContainer struct {
 
 func (cc *ComponentContainer) AllComponents() map[string]*Component {
 	return cc.allComponents
+}
+
+func (cc *ComponentContainer) AddProto(proto *ProtoComponent) {
+
+	cc.FrameworkLogger.LogTracef("Adding proto %s", proto.Component.Name)
+
+	cc.protoComponents[proto.Component.Name] = proto
+}
+
+func (cc *ComponentContainer) WrapAndAddProto(name string, instance interface{}) {
+	p := CreateProtoComponent(instance, name)
+	cc.AddProto(p)
+}
+
+func (cc *ComponentContainer) AddProtos(protos []*ProtoComponent) {
+	for _, p := range protos {
+		cc.AddProto(p)
+	}
 }
 
 func (cc *ComponentContainer) FindByType(typeName string) []interface{} {
@@ -188,7 +207,14 @@ func (cc *ComponentContainer) countNotReady(warn bool) int {
 	return notReady
 }
 
-func (cc *ComponentContainer) Populate(protoComponents map[string]*ProtoComponent, configAccessor *config.ConfigAccessor) {
+func (cc *ComponentContainer) Populate() error {
+
+	defer func() {
+		if r := recover(); r != nil {
+			cc.FrameworkLogger.LogErrorfWithTrace("Panic recovered while configuring components %s", r)
+			os.Exit(-1)
+		}
+	}()
 
 	decorators := make([]ComponentDecorator, 1)
 
@@ -200,7 +226,7 @@ func (cc *ComponentContainer) Populate(protoComponents map[string]*ProtoComponen
 	cc.allComponents = make(map[string]*Component)
 	cc.componentsByType = make(map[string][]interface{})
 
-	for _, protoComponent := range protoComponents {
+	for _, protoComponent := range cc.protoComponents {
 
 		component := protoComponent.Component
 
@@ -209,7 +235,7 @@ func (cc *ComponentContainer) Populate(protoComponents map[string]*ProtoComponen
 
 	}
 
-	err := cc.resolveDependenciesAndConfig(protoComponents, configAccessor)
+	err := cc.resolveDependenciesAndConfig()
 
 	if err != nil {
 		cc.FrameworkLogger.LogFatalf(err.Error())
@@ -218,13 +244,15 @@ func (cc *ComponentContainer) Populate(protoComponents map[string]*ProtoComponen
 	}
 
 	cc.decorateComponents(decorators)
+
+	return nil
 }
 
-func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents map[string]*ProtoComponent, configAccessor *config.ConfigAccessor) error {
+func (cc *ComponentContainer) resolveDependenciesAndConfig() error {
 
 	fl := cc.FrameworkLogger
 
-	for _, proto := range protoComponents {
+	for _, proto := range cc.protoComponents {
 
 		for fieldName, depName := range proto.Dependencies {
 
@@ -341,12 +369,12 @@ func (cc *ComponentContainer) mapComponentToType(component *Component) {
 
 }
 
-func CreateContainer(protoComponents map[string]*ProtoComponent, loggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor) *ComponentContainer {
+func NewContainer(loggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor) *ComponentContainer {
 
 	container := new(ComponentContainer)
+	container.protoComponents = make(map[string]*ProtoComponent)
 	container.FrameworkLogger = loggingManager.CreateLogger(containerComponentName)
 	container.configAccessor = configAccessor
-	container.Populate(protoComponents, configAccessor)
 
 	return container
 

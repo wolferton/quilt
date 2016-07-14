@@ -81,18 +81,16 @@ func (sem *ServiceErrorManager) LoadErrors(definitions []interface{}) {
 	}
 }
 
-func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor, protoComponents map[string]*ioc.ProtoComponent) {
+func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor, container *ioc.ComponentContainer) {
 
 	manager := new(ServiceErrorManager)
 	manager.FrameworkLogger = logManager.CreateLogger(serviceErrorManagerComponentName)
 	manager.PanicOnMissing = config.BoolValue("ServiceErrorManager.PanicOnMissing")
-	managerProto := ioc.CreateProtoComponent(manager, serviceErrorManagerComponentName)
-	protoComponents[serviceErrorManagerComponentName] = managerProto
+	container.WrapAndAddProto(serviceErrorManagerComponentName, manager)
 
 	decorator := new(ServiceErrorConsumerDecorator)
 	decorator.ErrorSource = manager
-	decoratorProto := ioc.CreateProtoComponent(decorator, serviceErrorDecoratorComponentName)
-	protoComponents[serviceErrorDecoratorComponentName] = decoratorProto
+	container.WrapAndAddProto(serviceErrorDecoratorComponentName, decorator)
 
 	definitions := config.StringVal("ServiceErrorManager.ErrorDefinitions")
 	errors := config.Array(definitions)

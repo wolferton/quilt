@@ -23,25 +23,23 @@ const rdbmsClientManagerName = ioc.FrameworkPrefix + "RdbmsClientManager"
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
 	FrameworkLoggingManager *logger.ComponentLoggerManager
-	protoComponents         map[string]*ioc.ProtoComponent
+	container               *ioc.ComponentContainer
 }
 
-func NewFacilitiesInitialisor(pc map[string]*ioc.ProtoComponent, flm *logger.ComponentLoggerManager) *FacilitiesInitialisor {
+func NewFacilitiesInitialisor(cc *ioc.ComponentContainer, flm *logger.ComponentLoggerManager) *FacilitiesInitialisor {
 	fi := new(FacilitiesInitialisor)
-	fi.protoComponents = pc
+	fi.container = cc
 	fi.FrameworkLoggingManager = flm
 
 	return fi
 }
 
-func BootstrapFrameworkLogging(protoComponents map[string]*ioc.ProtoComponent, bootStrapLogLevel int) *logger.ComponentLoggerManager {
+func BootstrapFrameworkLogging(bootStrapLogLevel int) (*logger.ComponentLoggerManager, *ioc.ProtoComponent) {
 
 	flm := logger.CreateComponentLoggerManager(bootStrapLogLevel, nil)
 	proto := ioc.CreateProtoComponent(flm, frameworkLoggingManagerName)
 
-	protoComponents[frameworkLoggingManagerName] = proto
-
-	return flm
+	return flm, proto
 
 }
 
@@ -71,11 +69,11 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 	}
 
 	if fc.JsonWs {
-		json.InitialiseJsonHttp(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.protoComponents)
+		json.InitialiseJsonHttp(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
 	}
 
 	if fc.ServiceErrorManager {
-		serviceerror.InitialiseServiceErrorManager(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.protoComponents)
+		serviceerror.InitialiseServiceErrorManager(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
 	}
 
 }
@@ -90,33 +88,34 @@ func (fi *FacilitiesInitialisor) updateFrameworkLogLevel() {
 
 func (fi *FacilitiesInitialisor) initialiseApplicationLogger() {
 
+	c := fi.container
+
 	defaultLogLevelLabel := fi.ConfigAccessor.StringVal("ApplicationLogger.DefaultLogLevel")
 	defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
 
 	initialLogLevelsByComponent := fi.ConfigAccessor.ObjectVal("ApplicationLogger.ComponentLogLevels")
 
 	applicationLoggingManager := logger.CreateComponentLoggerManager(defaultLogLevel, initialLogLevelsByComponent)
-	applicationLoggingMangagerProto := ioc.CreateProtoComponent(applicationLoggingManager, applicationLoggingManagerName)
-	fi.protoComponents[applicationLoggingManagerName] = applicationLoggingMangagerProto
+	c.WrapAndAddProto(applicationLoggingManagerName, applicationLoggingManager)
 
 	applicationLoggingDecorator := new(decorator.ApplicationLogDecorator)
 	applicationLoggingDecorator.LoggerManager = applicationLoggingManager
 	applicationLoggingDecorator.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(applicationLoggingDecoratorName)
-	applicationLoggingDecoratorProto := ioc.CreateProtoComponent(applicationLoggingDecorator, applicationLoggingDecoratorName)
 
-	fi.protoComponents[applicationLoggingDecoratorName] = applicationLoggingDecoratorProto
+	c.WrapAndAddProto(applicationLoggingDecoratorName, applicationLoggingDecorator)
 
 }
 
 func (fi *FacilitiesInitialisor) initialiseHttpServer() {
+
+	c := fi.container
 
 	httpServer := new(httpserver.QuiltHttpServer)
 	fi.ConfigAccessor.Populate("HttpServer", httpServer)
 
 	httpServer.Logger = fi.FrameworkLoggingManager.CreateLogger(httpServerName)
 
-	proto := ioc.CreateProtoComponent(httpServer, httpServerName)
-	fi.protoComponents[httpServerName] = proto
+	c.WrapAndAddProto(httpServerName, httpServer)
 
 	if !httpServer.AccessLogging {
 		return
@@ -127,8 +126,7 @@ func (fi *FacilitiesInitialisor) initialiseHttpServer() {
 
 	httpServer.AccessLogWriter = accessLogWriter
 
-	proto = ioc.CreateProtoComponent(accessLogWriter, accessLogWriterName)
-	fi.protoComponents[accessLogWriterName] = proto
+	c.WrapAndAddProto(accessLogWriterName, accessLogWriter)
 
 }
 
@@ -137,8 +135,7 @@ func (fi *FacilitiesInitialisor) initialiseQueryManager() {
 	queryManager.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(queryManagerName)
 	fi.ConfigAccessor.Populate("QueryManager", queryManager)
 
-	proto := ioc.CreateProtoComponent(queryManager, queryManagerName)
-	fi.protoComponents[queryManagerName] = proto
+	fi.container.WrapAndAddProto(queryManagerName, queryManager)
 }
 
 func (fi *FacilitiesInitialisor) initialiseDatabaseAccessor() {
@@ -151,7 +148,8 @@ func (fi *FacilitiesInitialisor) initialiseDatabaseAccessor() {
 	proto.AddDependency("Provider", manager.DatabaseProviderComponentName)
 	proto.AddDependency("QueryManager", queryManagerName)
 
-	fi.protoComponents[rdbmsClientManagerName] = proto
+	fi.container.AddProto(proto)
+
 }
 
 type FacilityConfig struct {

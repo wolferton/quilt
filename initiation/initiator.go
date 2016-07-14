@@ -33,25 +33,40 @@ func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
 	}
 
 	var params map[string]string
-	protoComponents := make(map[string]*ioc.ProtoComponent)
+	/*protoComponents := make(map[string]*ioc.ProtoComponent)
 
 	for _, c := range customComponents {
 		protoComponents[c.Component.Name] = c
-	}
+	}*/
 
 	params = i.parseArgs()
 
 	bootstrapLogLevel := logger.LogLevelFromLabel(params["logLevel"])
-	frameworkLoggingManager := BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
+	frameworkLoggingManager, logManageProto := BootstrapFrameworkLogging(bootstrapLogLevel)
 	i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
 
 	i.logger.LogInfof("Starting components")
 
-	container := i.buildContainer(protoComponents, frameworkLoggingManager, params)
+	configAccessor := i.loadConfigIntoAccessor(params["config"], frameworkLoggingManager)
+	container := ioc.NewContainer(frameworkLoggingManager, configAccessor)
+
+	container.AddProto(logManageProto)
+	container.AddProtos(customComponents)
+
+	facilitiesInitialisor := NewFacilitiesInitialisor(container, frameworkLoggingManager)
+	facilitiesInitialisor.Initialise(configAccessor)
+
+	err := container.Populate()
+
+	if err != nil {
+		i.logger.LogFatalf(err.Error())
+		i.shutdown(container)
+		os.Exit(1)
+	}
 
 	runtime.GC()
 
-	err := container.StartComponents()
+	err = container.StartComponents()
 
 	if err != nil {
 		i.logger.LogFatalf(err.Error())
@@ -75,21 +90,6 @@ func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
 			time.Sleep(100000000000)
 		}
 	}
-}
-
-func (i *Initiator) buildContainer(protoComponents map[string]*ioc.ProtoComponent, frameworkLoggingManager *logger.ComponentLoggerManager, params map[string]string) *ioc.ComponentContainer {
-
-	i.logger.LogInfof("Creating framework components")
-
-	facilitiesInitialisor := NewFacilitiesInitialisor(protoComponents, frameworkLoggingManager)
-
-	configAccessor := i.loadConfigIntoAccessor(params["config"], frameworkLoggingManager)
-
-	facilitiesInitialisor.Initialise(configAccessor)
-
-	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor)
-
-	return container
 }
 
 func (i *Initiator) shutdown(container *ioc.ComponentContainer) {
