@@ -9,14 +9,15 @@ import (
 	"github.com/wolferton/quilt/ioc"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
 )
 
-const initiatorComponentName string = "quiltFrameworkInitiator"
-const jsonMergerComponentName string = "quiltJsonMerger"
-const configInjectorComponentName string = "quiltConfigInjector"
+const initiatorComponentName string = ioc.FrameworkPrefix + "FrameworkInitiator"
+const jsonMergerComponentName string = ioc.FrameworkPrefix + "JsonMerger"
+const configAccessorComponentName string = ioc.FrameworkPrefix + "ConfigAccessor"
 
 type Initiator struct {
 	logger logger.Logger
@@ -42,22 +43,14 @@ func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
 
 	bootstrapLogLevel := logger.LogLevelFromLabel(params["logLevel"])
 	frameworkLoggingManager := BootstrapFrameworkLogging(protoComponents, bootstrapLogLevel)
-
 	i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
-	i.logger.LogInfof("Creating framework components")
-
-	facilitiesInitialisor := NewFacilitiesInitialisor(protoComponents, frameworkLoggingManager)
-
-	configAccessor := i.loadConfigIntoAccessor(params["config"], frameworkLoggingManager)
-
-	injectorLogger := frameworkLoggingManager.CreateLogger(configInjectorComponentName)
-	configInjector := config.ConfigInjector{injectorLogger, configAccessor}
-
-	facilitiesInitialisor.Initialise(configAccessor, &configInjector)
-
-	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor, &configInjector)
 
 	i.logger.LogInfof("Starting components")
+
+	container := i.buildContainer(protoComponents, frameworkLoggingManager, params)
+
+	runtime.GC()
+
 	err := container.StartComponents()
 
 	if err != nil {
@@ -84,6 +77,21 @@ func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
 	}
 }
 
+func (i *Initiator) buildContainer(protoComponents map[string]*ioc.ProtoComponent, frameworkLoggingManager *logger.ComponentLoggerManager, params map[string]string) *ioc.ComponentContainer {
+
+	i.logger.LogInfof("Creating framework components")
+
+	facilitiesInitialisor := NewFacilitiesInitialisor(protoComponents, frameworkLoggingManager)
+
+	configAccessor := i.loadConfigIntoAccessor(params["config"], frameworkLoggingManager)
+
+	facilitiesInitialisor.Initialise(configAccessor)
+
+	container := ioc.CreateContainer(protoComponents, frameworkLoggingManager, configAccessor)
+
+	return container
+}
+
 func (i *Initiator) shutdown(container *ioc.ComponentContainer) {
 	i.logger.LogInfof("Shutting down")
 
@@ -95,6 +103,7 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 	configFiles := i.builtInConfigPaths()
 
 	expandedPaths, err := config.ExpandToFiles(i.splitConfigPaths(configPath))
+	fl := frameworkLoggingManager.CreateLogger(configAccessorComponentName)
 
 	if err != nil {
 		i.logger.LogFatalf("Unable to load specified config files: %s", err.Error())
@@ -117,7 +126,7 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 
 	mergedJson := jsonMerger.LoadAndMergeConfig(configFiles)
 
-	return &config.ConfigAccessor{mergedJson}
+	return &config.ConfigAccessor{mergedJson, fl}
 }
 
 func (i *Initiator) parseArgs() map[string]string {

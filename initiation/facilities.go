@@ -22,7 +22,6 @@ const rdbmsClientManagerName = ioc.FrameworkPrefix + "RdbmsClientManager"
 
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
-	ConfigInjector          *config.ConfigInjector
 	FrameworkLoggingManager *logger.ComponentLoggerManager
 	protoComponents         map[string]*ioc.ProtoComponent
 }
@@ -46,13 +45,12 @@ func BootstrapFrameworkLogging(protoComponents map[string]*ioc.ProtoComponent, b
 
 }
 
-func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor, ci *config.ConfigInjector) {
+func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 	fi.ConfigAccessor = ca
-	fi.ConfigInjector = ci
 
 	fc := new(FacilityConfig)
 
-	ci.PopulateObjectFromJsonPath("Facilities", fc)
+	ca.Populate("Facilities", fc)
 
 	fi.updateFrameworkLogLevel()
 
@@ -113,7 +111,7 @@ func (fi *FacilitiesInitialisor) initialiseApplicationLogger() {
 func (fi *FacilitiesInitialisor) initialiseHttpServer() {
 
 	httpServer := new(httpserver.QuiltHttpServer)
-	fi.ConfigInjector.PopulateObjectFromJsonPath("HttpServer", httpServer)
+	fi.ConfigAccessor.Populate("HttpServer", httpServer)
 
 	httpServer.Logger = fi.FrameworkLoggingManager.CreateLogger(httpServerName)
 
@@ -125,7 +123,7 @@ func (fi *FacilitiesInitialisor) initialiseHttpServer() {
 	}
 
 	accessLogWriter := new(httpserver.AccessLogWriter)
-	fi.ConfigInjector.PopulateObjectFromJsonPath("HttpServer.AccessLog", accessLogWriter)
+	fi.ConfigAccessor.Populate("HttpServer.AccessLog", accessLogWriter)
 
 	httpServer.AccessLogWriter = accessLogWriter
 
@@ -137,7 +135,7 @@ func (fi *FacilitiesInitialisor) initialiseHttpServer() {
 func (fi *FacilitiesInitialisor) initialiseQueryManager() {
 	queryManager := new(querymanager.QueryManager)
 	queryManager.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(queryManagerName)
-	fi.ConfigInjector.PopulateObjectFromJsonPath("QueryManager", queryManager)
+	fi.ConfigAccessor.Populate("QueryManager", queryManager)
 
 	proto := ioc.CreateProtoComponent(queryManager, queryManagerName)
 	fi.protoComponents[queryManagerName] = proto
@@ -146,7 +144,7 @@ func (fi *FacilitiesInitialisor) initialiseQueryManager() {
 func (fi *FacilitiesInitialisor) initialiseDatabaseAccessor() {
 	manager := new(rdbms.DefaultRdbmsClientManager)
 	manager.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(rdbmsClientManagerName)
-	fi.ConfigInjector.PopulateObjectFromJsonPath("RdbmsAccess", manager)
+	fi.ConfigAccessor.Populate("RdbmsAccess", manager)
 
 	proto := ioc.CreateProtoComponent(manager, rdbmsClientManagerName)
 

@@ -118,6 +118,7 @@ func (wh *WsHandler) process(jsonReq *WsRequest, w http.ResponseWriter) {
 
 	defer func() {
 		if r := recover(); r != nil {
+			wh.QuiltApplicationLogger.LogErrorfWithTrace("Panic recovered while trying process a request or write its response %s", r)
 			wh.writePanicResponse(r, w)
 		}
 	}()

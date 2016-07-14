@@ -17,7 +17,7 @@ type ComponentContainer struct {
 	allComponents    map[string]*Component
 	componentsByType map[string][]interface{}
 	FrameworkLogger  logger.Logger
-	configInjector   *config.ConfigInjector
+	configAccessor   *config.ConfigAccessor
 	startable        []*Component
 	stoppable        []*Component
 	blocker          []*Component
@@ -253,7 +253,7 @@ func (cc *ComponentContainer) resolveDependenciesAndConfig(protoComponents map[s
 		for fieldName, configPath := range proto.ConfigPromises {
 			fl.LogTracef("%s needs %s", proto.Component.Name, fieldName, configPath)
 
-			cc.configInjector.PopulateFieldFromJsonPath(fieldName, configPath, proto.Component.Instance)
+			cc.configAccessor.SetField(fieldName, configPath, proto.Component.Instance)
 
 		}
 
@@ -341,11 +341,11 @@ func (cc *ComponentContainer) mapComponentToType(component *Component) {
 
 }
 
-func CreateContainer(protoComponents map[string]*ProtoComponent, loggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor, configInjector *config.ConfigInjector) *ComponentContainer {
+func CreateContainer(protoComponents map[string]*ProtoComponent, loggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor) *ComponentContainer {
 
 	container := new(ComponentContainer)
 	container.FrameworkLogger = loggingManager.CreateLogger(containerComponentName)
-	container.configInjector = configInjector
+	container.configAccessor = configAccessor
 	container.Populate(protoComponents, configAccessor)
 
 	return container

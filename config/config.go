@@ -20,7 +20,8 @@ const (
 type ConfigValue interface{}
 
 type ConfigAccessor struct {
-	JsonData map[string]interface{}
+	JsonData        map[string]interface{}
+	FrameworkLogger logger.Logger
 }
 
 func (c *ConfigAccessor) PathExists(path string) bool {
@@ -110,14 +111,8 @@ func (c *ConfigAccessor) configValue(path []string, jsonMap map[string]interface
 	}
 }
 
-type ConfigInjector struct {
-	FrameworkLogger logger.Logger
-	ConfigAccessor  *ConfigAccessor
-}
+func (ca *ConfigAccessor) SetField(fieldName string, path string, target interface{}) {
 
-func (ci *ConfigInjector) PopulateFieldFromJsonPath(fieldName string, path string, target interface{}) {
-
-	ca := ci.ConfigAccessor
 	targetReflect := reflect.ValueOf(target).Elem()
 	targetField := targetReflect.FieldByName(fieldName)
 
@@ -129,13 +124,12 @@ func (ci *ConfigInjector) PopulateFieldFromJsonPath(fieldName string, path strin
 	case reflect.Int:
 		targetField.SetInt(int64(ca.IntValue(path)))
 	default:
-		ci.FrameworkLogger.LogErrorf("Unable to use value at path %s as target field %s is not a suppported type", path, fieldName)
+		ca.FrameworkLogger.LogErrorf("Unable to use value at path %s as target field %s is not a suppported type", path, fieldName)
 	}
 
 }
 
-func (ci *ConfigInjector) PopulateObjectFromJsonPath(path string, target interface{}) {
-	ca := ci.ConfigAccessor
+func (ca *ConfigAccessor) Populate(path string, target interface{}) {
 	exists := ca.PathExists(path)
 
 	if exists {
@@ -150,13 +144,13 @@ func (ci *ConfigInjector) PopulateObjectFromJsonPath(path string, target interfa
 			expectedConfigPath := path + JsonPathSeparator + fieldName
 
 			if ca.PathExists(expectedConfigPath) {
-				ci.PopulateFieldFromJsonPath(fieldName, expectedConfigPath, target)
+				ca.SetField(fieldName, expectedConfigPath, target)
 			}
 
 		}
 
 	} else {
-		ci.FrameworkLogger.LogErrorf("Trying to populate an object from a JSON object, but the base path %s does not exist", path)
+		ca.FrameworkLogger.LogErrorf("Trying to populate an object from a JSON object, but the base path %s does not exist", path)
 	}
 
 }

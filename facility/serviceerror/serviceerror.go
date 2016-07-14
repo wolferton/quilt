@@ -118,3 +118,7 @@ func (secd *ServiceErrorConsumerDecorator) DecorateComponent(component *ioc.Comp
 	c := component.Instance.(ws.ServiceErrorConsumer)
 	c.ProvideErrorFinder(secd.ErrorSource)
 }
+
+type FrameworkServiceErrorFinder interface {
+	UnmarshallError() *ws.CategorisedError
+}

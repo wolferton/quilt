@@ -2,5 +2,8 @@
   "ServiceErrorManager":{
     "PanicOnMissing": true,
     "ErrorDefinitions": "serviceErrors"
+  },
+  "FrameworkServiceErrors":{
+    "Unmarshall": ["C", "FRM001", "The body of the request could not be parsed. Please check the format of your request"]
   }
 }
