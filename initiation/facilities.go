@@ -2,6 +2,7 @@ package initiation
 
 import (
 	"github.com/wolferton/quilt/config"
+	"github.com/wolferton/quilt/facility"
 	"github.com/wolferton/quilt/facility/decorator"
 	"github.com/wolferton/quilt/facility/httpserver"
 	"github.com/wolferton/quilt/facility/jsonws"
@@ -24,7 +25,10 @@ const rdbmsClientManagerName = ioc.FrameworkPrefix + "RdbmsClientManager"
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
 	FrameworkLoggingManager *logger.ComponentLoggerManager
+	Logger                  logger.Logger
 	container               *ioc.ComponentContainer
+	facilities              []facility.FacilityBuilder
+	facilityStatus          map[string]interface{}
 }
 
 func NewFacilitiesInitialisor(cc *ioc.ComponentContainer, flm *logger.ComponentLoggerManager) *FacilitiesInitialisor {
@@ -44,10 +48,35 @@ func BootstrapFrameworkLogging(bootStrapLogLevel int) (*logger.ComponentLoggerMa
 
 }
 
+func (fi *FacilitiesInitialisor) AddFacility(f facility.FacilityBuilder) {
+	fi.facilities = append(fi.facilities, f)
+}
+
+func (fi *FacilitiesInitialisor) buildEnabledFacilities() {
+
+	for _, fb := range fi.facilities {
+
+		name := fb.FacilityName()
+
+		if fi.facilityStatus[name] == nil {
+
+			fi.Logger.LogWarnf("No setting for facility %s in the Facilities configuration object - will not enable this facility", name)
+			continue
+
+		}
+
+		if fi.facilityStatus[name].(bool) {
+			fb.BuildAndRegister(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
+		}
+	}
+
+}
+
 func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 	fi.ConfigAccessor = ca
 
 	fc := ca.ObjectVal("Facilities")
+	fi.facilityStatus = fc
 	fi.updateFrameworkLogLevel()
 
 	if fc["ApplicationLogging"].(bool) {
@@ -66,15 +95,10 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 		fi.initialiseDatabaseAccessor()
 	}
 
-	if fc["JsonWs"].(bool) {
-		fb := new(jsonws.JsonWsFacilityBuilder)
-		fb.BuildAndRegister(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
-	}
+	fi.AddFacility(new(jsonws.JsonWsFacilityBuilder))
+	fi.AddFacility(new(serviceerror.ServiceErrorManagerFacilityBuilder))
 
-	if fc["ServiceErrorManager"].(bool) {
-		serviceerror.InitialiseServiceErrorManager(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
-	}
-
+	fi.buildEnabledFacilities()
 }
 
 func (fi *FacilitiesInitialisor) updateFrameworkLogLevel() {

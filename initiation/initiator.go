@@ -18,6 +18,7 @@ import (
 const initiatorComponentName string = ioc.FrameworkPrefix + "FrameworkInitiator"
 const jsonMergerComponentName string = ioc.FrameworkPrefix + "JsonMerger"
 const configAccessorComponentName string = ioc.FrameworkPrefix + "ConfigAccessor"
+const facilityInitialisorComponentName string = ioc.FrameworkPrefix + "FacilityInitialisor"
 
 type Initiator struct {
 	logger logger.Logger
@@ -54,6 +55,7 @@ func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
 	container.AddProtos(customComponents)
 
 	facilitiesInitialisor := NewFacilitiesInitialisor(container, frameworkLoggingManager)
+	facilitiesInitialisor.Logger = frameworkLoggingManager.CreateLogger(facilityInitialisorComponentName)
 	facilitiesInitialisor.Initialise(configAccessor)
 
 	err := container.Populate()

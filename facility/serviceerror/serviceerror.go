@@ -81,24 +81,31 @@ func (sem *ServiceErrorManager) LoadErrors(definitions []interface{}) {
 	}
 }
 
-func InitialiseServiceErrorManager(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor, container *ioc.ComponentContainer) {
+type ServiceErrorManagerFacilityBuilder struct {
+}
+
+func (fb *ServiceErrorManagerFacilityBuilder) BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
 
 	manager := new(ServiceErrorManager)
-	manager.PanicOnMissing = config.BoolValue("ServiceErrorManager.PanicOnMissing")
-	container.WrapAndAddProto(serviceErrorManagerComponentName, manager)
+	manager.PanicOnMissing = ca.BoolValue("ServiceErrorManager.PanicOnMissing")
+	cn.WrapAndAddProto(serviceErrorManagerComponentName, manager)
 
 	decorator := new(ServiceErrorConsumerDecorator)
 	decorator.ErrorSource = manager
-	container.WrapAndAddProto(serviceErrorDecoratorComponentName, decorator)
+	cn.WrapAndAddProto(serviceErrorDecoratorComponentName, decorator)
 
-	definitions := config.StringVal("ServiceErrorManager.ErrorDefinitions")
-	errors := config.Array(definitions)
+	definitions := ca.StringVal("ServiceErrorManager.ErrorDefinitions")
+	errors := ca.Array(definitions)
 
 	if errors == nil {
 		manager.FrameworkLogger.LogWarnf("No error definitions found at config path %s", definitions)
 	} else {
 		manager.LoadErrors(errors)
 	}
+}
+
+func (fb *ServiceErrorManagerFacilityBuilder) FacilityName() string {
+	return "ServiceErrorManager"
 }
 
 type ServiceErrorConsumerDecorator struct {

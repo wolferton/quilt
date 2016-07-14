@@ -8,13 +8,13 @@ import (
 )
 
 const (
-	NoLogging = 0
-	Trace     = 10
-	Debug     = 20
-	Info      = 40
-	Warn      = 50
-	Error     = 60
-	Fatal     = 70
+	All   = 0
+	Trace = 10
+	Debug = 20
+	Info  = 40
+	Warn  = 50
+	Error = 60
+	Fatal = 70
 )
 
 type FrameworkLogSource interface {
@@ -47,6 +47,8 @@ const FatalLabel = "FATAL"
 
 func LogLevelFromLabel(label string) int {
 	switch strings.ToUpper(label) {
+	case WarnLabel:
+		return Warn
 	case TraceLabel:
 		return Trace
 	case DebugLabel:
@@ -59,7 +61,7 @@ func LogLevelFromLabel(label string) int {
 		return Fatal
 	}
 
-	return NoLogging
+	return All
 }
 
 type LevelAwareLogger struct {
