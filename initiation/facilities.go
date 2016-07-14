@@ -46,33 +46,31 @@ func BootstrapFrameworkLogging(bootStrapLogLevel int) (*logger.ComponentLoggerMa
 func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 	fi.ConfigAccessor = ca
 
-	fc := new(FacilityConfig)
-
-	ca.Populate("Facilities", fc)
-
+	fc := ca.ObjectVal("Facilities")
 	fi.updateFrameworkLogLevel()
 
-	if fc.ApplicationLogging {
+	if fc["ApplicationLogging"].(bool) {
 		fi.initialiseApplicationLogger()
 	}
 
-	if fc.HttpServer {
+	if fc["HttpServer"].(bool) {
 		fi.initialiseHttpServer()
 	}
 
-	if fc.QueryManager {
+	if fc["QueryManager"].(bool) {
 		fi.initialiseQueryManager()
 	}
 
-	if fc.RdbmsAccess {
+	if fc["RdbmsAccess"].(bool) {
 		fi.initialiseDatabaseAccessor()
 	}
 
-	if fc.JsonWs {
-		json.InitialiseJsonHttp(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
+	if fc["JsonWs"].(bool) {
+		fb := new(json.JsonWsFacilityBuilder)
+		fb.BuildAndRegister(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
 	}
 
-	if fc.ServiceErrorManager {
+	if fc["ServiceErrorManager"].(bool) {
 		serviceerror.InitialiseServiceErrorManager(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
 	}
 
@@ -150,14 +148,4 @@ func (fi *FacilitiesInitialisor) initialiseDatabaseAccessor() {
 
 	fi.container.AddProto(proto)
 
-}
-
-type FacilityConfig struct {
-	HttpServer          bool
-	JsonWs              bool
-	FrameworkLogging    bool
-	ApplicationLogging  bool
-	QueryManager        bool
-	RdbmsAccess         bool
-	ServiceErrorManager bool
 }

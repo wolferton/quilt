@@ -13,26 +13,33 @@ const jsonAbnormalResponseWriterComponentName = ioc.FrameworkPrefix + "JsonAbnor
 const jsonHandlerDecoratorComponentName = ioc.FrameworkPrefix + "JsonHandlerDecorator"
 const wsHttpStatusDeterminerComponentName = ioc.FrameworkPrefix + "HttpStatusDeterminer"
 
-func InitialiseJsonHttp(logManager *logger.ComponentLoggerManager, config *config.ConfigAccessor, container *ioc.ComponentContainer) {
+type JsonWsFacilityBuilder struct {
+}
+
+func (fb *JsonWsFacilityBuilder) BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
 
 	responseWriter := new(DefaultJsonResponseWriter)
-	responseWriter.FrameworkLogger = logManager.CreateLogger(jsonResponseWriterComponentName)
-	container.WrapAndAddProto(jsonResponseWriterComponentName, responseWriter)
+	responseWriter.FrameworkLogger = lm.CreateLogger(jsonResponseWriterComponentName)
+	cn.WrapAndAddProto(jsonResponseWriterComponentName, responseWriter)
 
 	abnormalResponseWriter := new(DefaultAbnormalResponseWriter)
-	abnormalResponseWriter.FrameworkLogger = logManager.CreateLogger(jsonAbnormalResponseWriterComponentName)
-	container.WrapAndAddProto(jsonAbnormalResponseWriterComponentName, abnormalResponseWriter)
+	abnormalResponseWriter.FrameworkLogger = lm.CreateLogger(jsonAbnormalResponseWriterComponentName)
+	cn.WrapAndAddProto(jsonAbnormalResponseWriterComponentName, abnormalResponseWriter)
 
 	statusDeterminer := new(ws.DefaultHttpStatusCodeDeterminer)
-	container.WrapAndAddProto(wsHttpStatusDeterminerComponentName, statusDeterminer)
+	cn.WrapAndAddProto(wsHttpStatusDeterminerComponentName, statusDeterminer)
 
 	jsonUnmarshaller := new(DefaultJsonUnmarshaller)
-	jsonUnmarshaller.FrameworkLogger = logManager.CreateLogger(jsonUnmarshallerComponentName)
-	container.WrapAndAddProto(jsonUnmarshallerComponentName, jsonUnmarshaller)
+	jsonUnmarshaller.FrameworkLogger = lm.CreateLogger(jsonUnmarshallerComponentName)
+	cn.WrapAndAddProto(jsonUnmarshallerComponentName, jsonUnmarshaller)
 
-	decoratorLogger := logManager.CreateLogger(jsonHandlerDecoratorComponentName)
+	decoratorLogger := lm.CreateLogger(jsonHandlerDecoratorComponentName)
 	decorator := JsonWsHandlerDecorator{decoratorLogger, responseWriter, abnormalResponseWriter, statusDeterminer, jsonUnmarshaller}
-	container.WrapAndAddProto(jsonHandlerDecoratorComponentName, &decorator)
+	cn.WrapAndAddProto(jsonHandlerDecoratorComponentName, &decorator)
+}
+
+func (fb *JsonWsFacilityBuilder) FacilityName() string {
+	return "JsonWs"
 }
 
 type JsonWsHandlerDecorator struct {
