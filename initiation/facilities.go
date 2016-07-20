@@ -17,8 +17,6 @@ const applicationLoggingManagerName = ioc.FrameworkPrefix + "ApplicationLoggingM
 const frameworkLoggingManagerName = ioc.FrameworkPrefix + "FrameworkLoggingManager"
 const frameworkLoggerDecoratorName = ioc.FrameworkPrefix + "FrameworkLoggingDecorator"
 const applicationLoggingDecoratorName = ioc.FrameworkPrefix + "ApplicationLoggingDecorator"
-const httpServerName = ioc.FrameworkPrefix + "HttpServer"
-const accessLogWriterName = ioc.FrameworkPrefix + "AccessLogWriter"
 const queryManagerName = ioc.FrameworkPrefix + "QueryManager"
 const rdbmsClientManagerName = ioc.FrameworkPrefix + "RdbmsClientManager"
 
@@ -83,10 +81,6 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 		fi.initialiseApplicationLogger()
 	}
 
-	if fc["HttpServer"].(bool) {
-		fi.initialiseHttpServer()
-	}
-
 	if fc["QueryManager"].(bool) {
 		fi.initialiseQueryManager()
 	}
@@ -95,6 +89,7 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 		fi.initialiseDatabaseAccessor()
 	}
 
+	fi.AddFacility(new(httpserver.HttpServerFacilityBuilder))
 	fi.AddFacility(new(jsonws.JsonWsFacilityBuilder))
 	fi.AddFacility(new(serviceerror.ServiceErrorManagerFacilityBuilder))
 
@@ -139,28 +134,6 @@ func (fi *FacilitiesInitialisor) initialiseApplicationLogger() {
 	applicationLoggingDecorator.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(applicationLoggingDecoratorName)
 
 	c.WrapAndAddProto(applicationLoggingDecoratorName, applicationLoggingDecorator)
-
-}
-
-func (fi *FacilitiesInitialisor) initialiseHttpServer() {
-
-	c := fi.container
-
-	httpServer := new(httpserver.HttpServer)
-	fi.ConfigAccessor.Populate("HttpServer", httpServer)
-
-	c.WrapAndAddProto(httpServerName, httpServer)
-
-	if !httpServer.AccessLogging {
-		return
-	}
-
-	accessLogWriter := new(httpserver.AccessLogWriter)
-	fi.ConfigAccessor.Populate("HttpServer.AccessLog", accessLogWriter)
-
-	httpServer.AccessLogWriter = accessLogWriter
-
-	c.WrapAndAddProto(accessLogWriterName, accessLogWriter)
 
 }
 

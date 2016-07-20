@@ -7,12 +7,12 @@ import (
 )
 
 //TODO Rename application log var
-const expectedApplicationLoggerFieldName string = ioc.FrameworkPrefix + "ApplicationLogger"
+const expectedApplicationLoggerFieldName string = "QuiltApplicationLogger"
 const expectedFrameworkLoggerFieldName string = "FrameworkLogger"
 
-func HasFieldOfName(component *ioc.Component, name string) bool {
+func HasFieldOfName(component *ioc.Component, fieldName string) bool {
 	reflectComponent := reflect.ValueOf(component.Instance).Elem()
-	reflectFieldOfInterest := reflectComponent.FieldByName(name)
+	reflectFieldOfInterest := reflectComponent.FieldByName(fieldName)
 
 	return reflectFieldOfInterest.IsValid()
 }
@@ -38,7 +38,7 @@ func (ald *ApplicationLogDecorator) OfInterest(component *ioc.Component) bool {
 			frameworkLog.LogTracef("%s NEEDS an ApplicationLogger", component.Name)
 
 		} else {
-			frameworkLog.LogTracef("%s does not need an ApplicationLogger", component.Name)
+			frameworkLog.LogTracef("%s does not need an ApplicationLogger (no field named %s)", component.Name, expectedApplicationLoggerFieldName)
 		}
 	}
 

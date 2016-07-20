@@ -52,6 +52,14 @@ func (cc *ComponentContainer) FindByType(typeName string) []interface{} {
 }
 
 func (cc *ComponentContainer) StartComponents() error {
+
+	defer func() {
+		if r := recover(); r != nil {
+			cc.FrameworkLogger.LogErrorfWithTrace("Panic recovered while starting components components %s", r)
+			os.Exit(-1)
+		}
+	}()
+
 	for _, component := range cc.startable {
 
 		startable := component.Instance.(Startable)
