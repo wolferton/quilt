@@ -35,3 +35,7 @@ func (hsfb *HttpServerFacilityBuilder) BuildAndRegister(lm *logger.ComponentLogg
 func (hsfb *HttpServerFacilityBuilder) FacilityName() string {
 	return "HttpServer"
 }
+
+func (hsfb *HttpServerFacilityBuilder) DependsOnFacilities() []string {
+	return []string{}
+}

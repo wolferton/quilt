@@ -17,7 +17,7 @@ const applicationLoggingManagerName = ioc.FrameworkPrefix + "ApplicationLoggingM
 const frameworkLoggingManagerName = ioc.FrameworkPrefix + "FrameworkLoggingManager"
 const frameworkLoggerDecoratorName = ioc.FrameworkPrefix + "FrameworkLoggingDecorator"
 const applicationLoggingDecoratorName = ioc.FrameworkPrefix + "ApplicationLoggingDecorator"
-const queryManagerName = ioc.FrameworkPrefix + "QueryManager"
+
 const rdbmsClientManagerName = ioc.FrameworkPrefix + "RdbmsClientManager"
 
 type FacilitiesInitialisor struct {
@@ -81,14 +81,11 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 		fi.initialiseApplicationLogger()
 	}
 
-	if fc["QueryManager"].(bool) {
-		fi.initialiseQueryManager()
-	}
-
 	if fc["RdbmsAccess"].(bool) {
 		fi.initialiseDatabaseAccessor()
 	}
 
+	fi.AddFacility(new(querymanager.QueryManagerFacilityBuilder))
 	fi.AddFacility(new(httpserver.HttpServerFacilityBuilder))
 	fi.AddFacility(new(jsonws.JsonWsFacilityBuilder))
 	fi.AddFacility(new(serviceerror.ServiceErrorManagerFacilityBuilder))
@@ -138,10 +135,7 @@ func (fi *FacilitiesInitialisor) initialiseApplicationLogger() {
 }
 
 func (fi *FacilitiesInitialisor) initialiseQueryManager() {
-	queryManager := new(querymanager.QueryManager)
-	fi.ConfigAccessor.Populate("QueryManager", queryManager)
 
-	fi.container.WrapAndAddProto(queryManagerName, queryManager)
 }
 
 func (fi *FacilitiesInitialisor) initialiseDatabaseAccessor() {
@@ -151,7 +145,7 @@ func (fi *FacilitiesInitialisor) initialiseDatabaseAccessor() {
 	proto := ioc.CreateProtoComponent(manager, rdbmsClientManagerName)
 
 	proto.AddDependency("Provider", manager.DatabaseProviderComponentName)
-	proto.AddDependency("QueryManager", queryManagerName)
+	proto.AddDependency("QueryManager", querymanager.QueryManagerComponentName)
 
 	fi.container.AddProto(proto)
 

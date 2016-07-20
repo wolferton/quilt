@@ -40,6 +40,10 @@ func (fb *JsonWsFacilityBuilder) FacilityName() string {
 	return "JsonWs"
 }
 
+func (fb *JsonWsFacilityBuilder) DependsOnFacilities() []string {
+	return []string{}
+}
+
 type JsonWsHandlerDecorator struct {
 	FrameworkLogger      logger.Logger
 	ResponseWriter       ws.WsResponseWriter

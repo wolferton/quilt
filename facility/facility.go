@@ -9,4 +9,5 @@ import (
 type FacilityBuilder interface {
 	BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer)
 	FacilityName() string
+	DependsOnFacilities() []string
 }
