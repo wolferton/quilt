@@ -31,5 +31,5 @@ func (rafb *RdbmsAccessFacilityBuilder) FacilityName() string {
 }
 
 func (rafb *RdbmsAccessFacilityBuilder) DependsOnFacilities() []string {
-	return []string{}
+	return []string{querymanager.QueryManagerFacilityName}
 }

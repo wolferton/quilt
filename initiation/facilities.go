@@ -15,10 +15,8 @@ import (
 	"github.com/wolferton/quilt/ioc"
 )
 
-const applicationLoggingManagerName = ioc.FrameworkPrefix + "ApplicationLoggingManager"
 const frameworkLoggingManagerName = ioc.FrameworkPrefix + "FrameworkLoggingManager"
 const frameworkLoggerDecoratorName = ioc.FrameworkPrefix + "FrameworkLoggingDecorator"
-const applicationLoggingDecoratorName = ioc.FrameworkPrefix + "ApplicationLoggingDecorator"
 
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
@@ -89,7 +87,7 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) error {
 	fi.updateFrameworkLogLevel()
 
 	if fc["ApplicationLogging"].(bool) {
-		fi.initialiseApplicationLogger()
+		fi.AddFacility(new(ApplicationLoggingFacilityBuilder))
 	}
 
 	fi.AddFacility(new(querymanager.QueryManagerFacilityBuilder))
@@ -124,22 +122,32 @@ func (fi *FacilitiesInitialisor) updateFrameworkLogLevel() {
 
 }
 
-func (fi *FacilitiesInitialisor) initialiseApplicationLogger() {
+const applicationLoggingDecoratorName = ioc.FrameworkPrefix + "ApplicationLoggingDecorator"
+const applicationLoggingManagerName = ioc.FrameworkPrefix + "ApplicationLoggingManager"
 
-	c := fi.container
+type ApplicationLoggingFacilityBuilder struct {
+}
 
-	defaultLogLevelLabel := fi.ConfigAccessor.StringVal("ApplicationLogger.DefaultLogLevel")
+func (alfb *ApplicationLoggingFacilityBuilder) BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
+	defaultLogLevelLabel := ca.StringVal("ApplicationLogger.DefaultLogLevel")
 	defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
 
-	initialLogLevelsByComponent := fi.ConfigAccessor.ObjectVal("ApplicationLogger.ComponentLogLevels")
+	initialLogLevelsByComponent := ca.ObjectVal("ApplicationLogger.ComponentLogLevels")
 
 	applicationLoggingManager := logger.CreateComponentLoggerManager(defaultLogLevel, initialLogLevelsByComponent)
-	c.WrapAndAddProto(applicationLoggingManagerName, applicationLoggingManager)
+	cn.WrapAndAddProto(applicationLoggingManagerName, applicationLoggingManager)
 
 	applicationLoggingDecorator := new(decorator.ApplicationLogDecorator)
 	applicationLoggingDecorator.LoggerManager = applicationLoggingManager
-	applicationLoggingDecorator.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(applicationLoggingDecoratorName)
+	applicationLoggingDecorator.FrameworkLogger = lm.CreateLogger(applicationLoggingDecoratorName)
 
-	c.WrapAndAddProto(applicationLoggingDecoratorName, applicationLoggingDecorator)
+	cn.WrapAndAddProto(applicationLoggingDecoratorName, applicationLoggingDecorator)
+}
 
+func (alfb *ApplicationLoggingFacilityBuilder) FacilityName() string {
+	return "ApplicationLogging"
+}
+
+func (alfb *ApplicationLoggingFacilityBuilder) DependsOnFacilities() []string {
+	return []string{}
 }
