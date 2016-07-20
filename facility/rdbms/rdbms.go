@@ -2,8 +2,8 @@ package rdbms
 
 import (
 	"database/sql"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/facility/querymanager"
+	"github.com/wolferton/quilt/logging"
 )
 
 type DatabaseProvider interface {
@@ -20,7 +20,7 @@ type DefaultRdbmsClientManager struct {
 	DatabaseProviderComponentName string
 	QueryManager                  *querymanager.QueryManager
 	db                            *sql.DB
-	FrameworkLogger               logger.Logger
+	FrameworkLogger               logging.Logger
 }
 
 func (drcm *DefaultRdbmsClientManager) Client() *RdbmsClient {

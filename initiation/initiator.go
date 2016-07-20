@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/jsonmerger"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
+	"github.com/wolferton/quilt/logging"
 	"os"
 	"os/signal"
 	"runtime"
@@ -21,7 +21,7 @@ const configAccessorComponentName string = ioc.FrameworkPrefix + "ConfigAccessor
 const facilityInitialisorComponentName string = ioc.FrameworkPrefix + "FacilityInitialisor"
 
 type Initiator struct {
-	logger logger.Logger
+	logger logging.Logger
 }
 
 func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
@@ -42,7 +42,7 @@ func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
 
 	params = i.parseArgs()
 
-	bootstrapLogLevel := logger.LogLevelFromLabel(params["logLevel"])
+	bootstrapLogLevel := logging.LogLevelFromLabel(params["logLevel"])
 	frameworkLoggingManager, logManageProto := BootstrapFrameworkLogging(bootstrapLogLevel)
 	i.logger = frameworkLoggingManager.CreateLogger(initiatorComponentName)
 
@@ -103,7 +103,7 @@ func (i *Initiator) shutdown(container *ioc.ComponentContainer) {
 
 }
 
-func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingManager *logger.ComponentLoggerManager) *config.ConfigAccessor {
+func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingManager *logging.ComponentLoggerManager) *config.ConfigAccessor {
 	configFiles := i.builtInConfigPaths()
 
 	expandedPaths, err := config.ExpandToFiles(i.splitConfigPaths(configPath))
@@ -116,7 +116,7 @@ func (i *Initiator) loadConfigIntoAccessor(configPath string, frameworkLoggingMa
 
 	configFiles = append(configFiles, expandedPaths...)
 
-	if i.logger.IsLevelEnabled(logger.Debug) {
+	if i.logger.IsLevelEnabled(logging.Debug) {
 
 		i.logger.LogDebugf("Loading configuration from: ")
 

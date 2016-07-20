@@ -2,9 +2,9 @@ package rdbms
 
 import (
 	"github.com/wolferton/quilt/config"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/facility/querymanager"
 	"github.com/wolferton/quilt/ioc"
+	"github.com/wolferton/quilt/logging"
 )
 
 const rdbmsClientManagerName = ioc.FrameworkPrefix + "RdbmsClientManager"
@@ -12,7 +12,7 @@ const rdbmsClientManagerName = ioc.FrameworkPrefix + "RdbmsClientManager"
 type RdbmsAccessFacilityBuilder struct {
 }
 
-func (rafb *RdbmsAccessFacilityBuilder) BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
+func (rafb *RdbmsAccessFacilityBuilder) BuildAndRegister(lm *logging.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
 
 	manager := new(DefaultRdbmsClientManager)
 	ca.Populate("RdbmsAccess", manager)

@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/logging"
 	"reflect"
 	"strings"
 )
@@ -21,7 +21,7 @@ type ConfigValue interface{}
 
 type ConfigAccessor struct {
 	JsonData        map[string]interface{}
-	FrameworkLogger logger.Logger
+	FrameworkLogger logging.Logger
 }
 
 func (c *ConfigAccessor) PathExists(path string) bool {

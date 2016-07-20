@@ -2,8 +2,8 @@ package httpserver
 
 import (
 	"github.com/wolferton/quilt/config"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
+	"github.com/wolferton/quilt/logging"
 )
 
 const httpServerName = ioc.FrameworkPrefix + "HttpServer"
@@ -12,7 +12,7 @@ const accessLogWriterName = ioc.FrameworkPrefix + "AccessLogWriter"
 type HttpServerFacilityBuilder struct {
 }
 
-func (hsfb *HttpServerFacilityBuilder) BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
+func (hsfb *HttpServerFacilityBuilder) BuildAndRegister(lm *logging.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
 
 	httpServer := new(HttpServer)
 	ca.Populate("HttpServer", httpServer)

@@ -2,8 +2,8 @@ package serviceerror
 
 import (
 	"fmt"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
+	"github.com/wolferton/quilt/logging"
 	"github.com/wolferton/quilt/ws"
 	"strings"
 )
@@ -15,7 +15,7 @@ const (
 
 type ServiceErrorManager struct {
 	errors          map[string]*ws.CategorisedError
-	FrameworkLogger logger.Logger
+	FrameworkLogger logging.Logger
 	PanicOnMissing  bool
 }
 

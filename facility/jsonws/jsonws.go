@@ -2,8 +2,8 @@ package jsonws
 
 import (
 	"github.com/wolferton/quilt/config"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
+	"github.com/wolferton/quilt/logging"
 	"github.com/wolferton/quilt/ws"
 	"github.com/wolferton/quilt/ws/json"
 )
@@ -17,7 +17,7 @@ const wsHttpStatusDeterminerComponentName = ioc.FrameworkPrefix + "HttpStatusDet
 type JsonWsFacilityBuilder struct {
 }
 
-func (fb *JsonWsFacilityBuilder) BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
+func (fb *JsonWsFacilityBuilder) BuildAndRegister(lm *logging.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
 
 	responseWriter := new(json.DefaultJsonResponseWriter)
 	cn.WrapAndAddProto(jsonResponseWriterComponentName, responseWriter)
@@ -45,7 +45,7 @@ func (fb *JsonWsFacilityBuilder) DependsOnFacilities() []string {
 }
 
 type JsonWsHandlerDecorator struct {
-	FrameworkLogger      logger.Logger
+	FrameworkLogger      logging.Logger
 	ResponseWriter       ws.WsResponseWriter
 	ErrorResponseWriter  ws.WsAbnormalResponseWriter
 	StatusCodeDeterminer ws.HttpStatusCodeDeterminer

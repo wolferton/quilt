@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wolferton/quilt/config"
-	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/logging"
 	"os"
 	"reflect"
 	"time"
@@ -17,7 +17,7 @@ type ComponentContainer struct {
 	allComponents    map[string]*Component
 	protoComponents  map[string]*ProtoComponent
 	componentsByType map[string][]interface{}
-	FrameworkLogger  logger.Logger
+	FrameworkLogger  logging.Logger
 	configAccessor   *config.ConfigAccessor
 	startable        []*Component
 	stoppable        []*Component
@@ -377,7 +377,7 @@ func (cc *ComponentContainer) mapComponentToType(component *Component) {
 
 }
 
-func NewContainer(loggingManager *logger.ComponentLoggerManager, configAccessor *config.ConfigAccessor) *ComponentContainer {
+func NewContainer(loggingManager *logging.ComponentLoggerManager, configAccessor *config.ConfigAccessor) *ComponentContainer {
 
 	container := new(ComponentContainer)
 	container.protoComponents = make(map[string]*ProtoComponent)

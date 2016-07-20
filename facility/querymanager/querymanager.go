@@ -14,7 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wolferton/quilt/config"
-	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/logging"
 	"os"
 	"regexp"
 	"strconv"
@@ -24,7 +24,7 @@ import (
 type QueryManager struct {
 	TemplateLocation   string
 	VarMatchRegEx      string
-	FrameworkLogger    logger.Logger
+	FrameworkLogger    logging.Logger
 	QueryIdPrefix      string
 	TrimIdWhiteSpace   bool
 	WrapStrings        bool

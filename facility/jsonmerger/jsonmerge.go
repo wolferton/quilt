@@ -3,14 +3,14 @@ package jsonmerger
 import (
 	"encoding/json"
 	"github.com/wolferton/quilt/config"
-	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/logging"
 	"io/ioutil"
 )
 
 type JsonObject map[string]interface{}
 
 type JsonMerger struct {
-	Logger logger.Logger
+	Logger logging.Logger
 }
 
 func (jm *JsonMerger) LoadAndMergeConfig(files []string) map[string]interface{} {

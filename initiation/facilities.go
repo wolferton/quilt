@@ -8,11 +8,11 @@ import (
 	"github.com/wolferton/quilt/facility/decorator"
 	"github.com/wolferton/quilt/facility/httpserver"
 	"github.com/wolferton/quilt/facility/jsonws"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/facility/querymanager"
 	"github.com/wolferton/quilt/facility/rdbms"
 	"github.com/wolferton/quilt/facility/serviceerror"
 	"github.com/wolferton/quilt/ioc"
+	"github.com/wolferton/quilt/logging"
 )
 
 const frameworkLoggingManagerName = ioc.FrameworkPrefix + "FrameworkLoggingManager"
@@ -20,14 +20,14 @@ const frameworkLoggerDecoratorName = ioc.FrameworkPrefix + "FrameworkLoggingDeco
 
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
-	FrameworkLoggingManager *logger.ComponentLoggerManager
-	Logger                  logger.Logger
+	FrameworkLoggingManager *logging.ComponentLoggerManager
+	Logger                  logging.Logger
 	container               *ioc.ComponentContainer
 	facilities              []facility.FacilityBuilder
 	facilityStatus          map[string]interface{}
 }
 
-func NewFacilitiesInitialisor(cc *ioc.ComponentContainer, flm *logger.ComponentLoggerManager) *FacilitiesInitialisor {
+func NewFacilitiesInitialisor(cc *ioc.ComponentContainer, flm *logging.ComponentLoggerManager) *FacilitiesInitialisor {
 	fi := new(FacilitiesInitialisor)
 	fi.container = cc
 	fi.FrameworkLoggingManager = flm
@@ -35,9 +35,9 @@ func NewFacilitiesInitialisor(cc *ioc.ComponentContainer, flm *logger.ComponentL
 	return fi
 }
 
-func BootstrapFrameworkLogging(bootStrapLogLevel int) (*logger.ComponentLoggerManager, *ioc.ProtoComponent) {
+func BootstrapFrameworkLogging(bootStrapLogLevel int) (*logging.ComponentLoggerManager, *ioc.ProtoComponent) {
 
-	flm := logger.CreateComponentLoggerManager(bootStrapLogLevel, nil)
+	flm := logging.CreateComponentLoggerManager(bootStrapLogLevel, nil)
 	proto := ioc.CreateProtoComponent(flm, frameworkLoggingManagerName)
 
 	return flm, proto
@@ -106,7 +106,7 @@ func (fi *FacilitiesInitialisor) updateFrameworkLogLevel() {
 	flm := fi.FrameworkLoggingManager
 
 	defaultLogLevelLabel := fi.ConfigAccessor.StringVal("FrameworkLogger.DefaultLogLevel")
-	defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
+	defaultLogLevel := logging.LogLevelFromLabel(defaultLogLevelLabel)
 
 	initialLogLevelsByComponent := fi.ConfigAccessor.ObjectVal("FrameworkLogger.ComponentLogLevels")
 
@@ -128,13 +128,13 @@ const applicationLoggingManagerName = ioc.FrameworkPrefix + "ApplicationLoggingM
 type ApplicationLoggingFacilityBuilder struct {
 }
 
-func (alfb *ApplicationLoggingFacilityBuilder) BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
+func (alfb *ApplicationLoggingFacilityBuilder) BuildAndRegister(lm *logging.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
 	defaultLogLevelLabel := ca.StringVal("ApplicationLogger.DefaultLogLevel")
-	defaultLogLevel := logger.LogLevelFromLabel(defaultLogLevelLabel)
+	defaultLogLevel := logging.LogLevelFromLabel(defaultLogLevelLabel)
 
 	initialLogLevelsByComponent := ca.ObjectVal("ApplicationLogger.ComponentLogLevels")
 
-	applicationLoggingManager := logger.CreateComponentLoggerManager(defaultLogLevel, initialLogLevelsByComponent)
+	applicationLoggingManager := logging.CreateComponentLoggerManager(defaultLogLevel, initialLogLevelsByComponent)
 	cn.WrapAndAddProto(applicationLoggingManagerName, applicationLoggingManager)
 
 	applicationLoggingDecorator := new(decorator.ApplicationLogDecorator)

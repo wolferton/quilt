@@ -2,8 +2,8 @@ package httpserver
 
 import (
 	"fmt"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
+	"github.com/wolferton/quilt/logging"
 	"net/http"
 	"regexp"
 	"time"
@@ -17,7 +17,7 @@ type RegisteredProvider struct {
 type HttpServer struct {
 	registeredProvidersByMethod map[string][]*RegisteredProvider
 	componentContainer          *ioc.ComponentContainer
-	FrameworkLogger             logger.Logger
+	FrameworkLogger             logging.Logger
 	AccessLogWriter             *AccessLogWriter
 	AccessLogging               bool
 	Port                        int

@@ -2,7 +2,7 @@ package ws
 
 import (
 	"fmt"
-	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/logging"
 	"net/http"
 )
 
@@ -15,7 +15,7 @@ type WsHandler struct {
 	Logic                  WsRequestProcessor
 	ResponseWriter         WsResponseWriter
 	ErrorResponseWriter    WsAbnormalResponseWriter
-	QuiltApplicationLogger logger.Logger
+	QuiltApplicationLogger logging.Logger
 	StatusDeterminer       HttpStatusCodeDeterminer
 	ErrorFinder            ServiceErrorFinder
 	RevealPanicDetails     bool

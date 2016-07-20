@@ -2,13 +2,13 @@ package json
 
 import (
 	"encoding/json"
-	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/logging"
 	"github.com/wolferton/quilt/ws"
 	"net/http"
 )
 
 type DefaultJsonUnmarshaller struct {
-	FrameworkLogger logger.Logger
+	FrameworkLogger logging.Logger
 }
 
 func (jdu *DefaultJsonUnmarshaller) Unmarshall(httpReq *http.Request, logic interface{}) (*ws.WsRequest, error) {
@@ -36,7 +36,7 @@ func (jdu *DefaultJsonUnmarshaller) Unmarshall(httpReq *http.Request, logic inte
 }
 
 type DefaultJsonResponseWriter struct {
-	FrameworkLogger logger.Logger
+	FrameworkLogger logging.Logger
 }
 
 func (djrw *DefaultJsonResponseWriter) Write(res *ws.WsResponse, w http.ResponseWriter) error {
@@ -59,7 +59,7 @@ func (djrw *DefaultJsonResponseWriter) Write(res *ws.WsResponse, w http.Response
 }
 
 type DefaultAbnormalResponseWriter struct {
-	FrameworkLogger logger.Logger
+	FrameworkLogger logging.Logger
 }
 
 func (djerw *DefaultAbnormalResponseWriter) WriteWithErrors(status int, errors *ws.ServiceErrors, w http.ResponseWriter) error {

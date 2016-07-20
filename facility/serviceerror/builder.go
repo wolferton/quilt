@@ -2,14 +2,14 @@ package serviceerror
 
 import (
 	"github.com/wolferton/quilt/config"
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
+	"github.com/wolferton/quilt/logging"
 )
 
 type ServiceErrorManagerFacilityBuilder struct {
 }
 
-func (fb *ServiceErrorManagerFacilityBuilder) BuildAndRegister(lm *logger.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
+func (fb *ServiceErrorManagerFacilityBuilder) BuildAndRegister(lm *logging.ComponentLoggerManager, ca *config.ConfigAccessor, cn *ioc.ComponentContainer) {
 
 	manager := new(ServiceErrorManager)
 	manager.PanicOnMissing = ca.BoolValue("ServiceErrorManager.PanicOnMissing")

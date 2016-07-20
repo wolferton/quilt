@@ -1,8 +1,8 @@
 package decorator
 
 import (
-	"github.com/wolferton/quilt/facility/logger"
 	"github.com/wolferton/quilt/ioc"
+	"github.com/wolferton/quilt/logging"
 	"reflect"
 )
 
@@ -23,8 +23,8 @@ func TypeOfField(component *ioc.Component, name string) reflect.Type {
 }
 
 type ApplicationLogDecorator struct {
-	LoggerManager   *logger.ComponentLoggerManager
-	FrameworkLogger logger.Logger
+	LoggerManager   *logging.ComponentLoggerManager
+	FrameworkLogger logging.Logger
 }
 
 func (ald *ApplicationLogDecorator) OfInterest(component *ioc.Component) bool {
@@ -33,7 +33,7 @@ func (ald *ApplicationLogDecorator) OfInterest(component *ioc.Component) bool {
 
 	frameworkLog := ald.FrameworkLogger
 
-	if frameworkLog.IsLevelEnabled(logger.Trace) {
+	if frameworkLog.IsLevelEnabled(logging.Trace) {
 		if result {
 			frameworkLog.LogTracef("%s NEEDS an ApplicationLogger", component.Name)
 
@@ -61,8 +61,8 @@ func (ald *ApplicationLogDecorator) DecorateComponent(component *ioc.Component, 
 }
 
 type FrameworkLogDecorator struct {
-	LoggerManager   *logger.ComponentLoggerManager
-	FrameworkLogger logger.Logger
+	LoggerManager   *logging.ComponentLoggerManager
+	FrameworkLogger logging.Logger
 }
 
 func (fld *FrameworkLogDecorator) OfInterest(component *ioc.Component) bool {
@@ -71,7 +71,7 @@ func (fld *FrameworkLogDecorator) OfInterest(component *ioc.Component) bool {
 
 	frameworkLog := fld.FrameworkLogger
 
-	if frameworkLog.IsLevelEnabled(logger.Trace) {
+	if frameworkLog.IsLevelEnabled(logging.Trace) {
 		if result {
 			frameworkLog.LogTracef("%s NEEDS a %s", component.Name, expectedFrameworkLoggerFieldName)
 
