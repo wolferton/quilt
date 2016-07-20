@@ -1,6 +1,8 @@
 package initiation
 
 import (
+	"errors"
+	"fmt"
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility"
 	"github.com/wolferton/quilt/facility/decorator"
@@ -17,8 +19,6 @@ const applicationLoggingManagerName = ioc.FrameworkPrefix + "ApplicationLoggingM
 const frameworkLoggingManagerName = ioc.FrameworkPrefix + "FrameworkLoggingManager"
 const frameworkLoggerDecoratorName = ioc.FrameworkPrefix + "FrameworkLoggingDecorator"
 const applicationLoggingDecoratorName = ioc.FrameworkPrefix + "ApplicationLoggingDecorator"
-
-const rdbmsClientManagerName = ioc.FrameworkPrefix + "RdbmsClientManager"
 
 type FacilitiesInitialisor struct {
 	ConfigAccessor          *config.ConfigAccessor
@@ -50,7 +50,7 @@ func (fi *FacilitiesInitialisor) AddFacility(f facility.FacilityBuilder) {
 	fi.facilities = append(fi.facilities, f)
 }
 
-func (fi *FacilitiesInitialisor) buildEnabledFacilities() {
+func (fi *FacilitiesInitialisor) buildEnabledFacilities() error {
 
 	for _, fb := range fi.facilities {
 
@@ -63,14 +63,25 @@ func (fi *FacilitiesInitialisor) buildEnabledFacilities() {
 
 		}
 
+		for _, dep := range fb.DependsOnFacilities() {
+
+			if fi.facilityStatus[dep] == nil || fi.facilityStatus[dep].(bool) == false {
+				message := fmt.Sprintf("Facility %s depends on facility %s, but %s is not enabled in configuration.", name, dep, dep)
+				return errors.New(message)
+			}
+
+		}
+
 		if fi.facilityStatus[name].(bool) {
 			fb.BuildAndRegister(fi.FrameworkLoggingManager, fi.ConfigAccessor, fi.container)
 		}
 	}
 
+	return nil
+
 }
 
-func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
+func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) error {
 	fi.ConfigAccessor = ca
 
 	fc := ca.ObjectVal("Facilities")
@@ -81,16 +92,15 @@ func (fi *FacilitiesInitialisor) Initialise(ca *config.ConfigAccessor) {
 		fi.initialiseApplicationLogger()
 	}
 
-	if fc["RdbmsAccess"].(bool) {
-		fi.initialiseDatabaseAccessor()
-	}
-
 	fi.AddFacility(new(querymanager.QueryManagerFacilityBuilder))
 	fi.AddFacility(new(httpserver.HttpServerFacilityBuilder))
 	fi.AddFacility(new(jsonws.JsonWsFacilityBuilder))
 	fi.AddFacility(new(serviceerror.ServiceErrorManagerFacilityBuilder))
+	fi.AddFacility(new(rdbms.RdbmsAccessFacilityBuilder))
 
-	fi.buildEnabledFacilities()
+	err := fi.buildEnabledFacilities()
+
+	return err
 }
 
 func (fi *FacilitiesInitialisor) updateFrameworkLogLevel() {
@@ -131,22 +141,5 @@ func (fi *FacilitiesInitialisor) initialiseApplicationLogger() {
 	applicationLoggingDecorator.FrameworkLogger = fi.FrameworkLoggingManager.CreateLogger(applicationLoggingDecoratorName)
 
 	c.WrapAndAddProto(applicationLoggingDecoratorName, applicationLoggingDecorator)
-
-}
-
-func (fi *FacilitiesInitialisor) initialiseQueryManager() {
-
-}
-
-func (fi *FacilitiesInitialisor) initialiseDatabaseAccessor() {
-	manager := new(rdbms.DefaultRdbmsClientManager)
-	fi.ConfigAccessor.Populate("RdbmsAccess", manager)
-
-	proto := ioc.CreateProtoComponent(manager, rdbmsClientManagerName)
-
-	proto.AddDependency("Provider", manager.DatabaseProviderComponentName)
-	proto.AddDependency("QueryManager", querymanager.QueryManagerComponentName)
-
-	fi.container.AddProto(proto)
 
 }

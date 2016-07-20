@@ -56,42 +56,44 @@ func (i *Initiator) Start(customComponents []*ioc.ProtoComponent) {
 
 	facilitiesInitialisor := NewFacilitiesInitialisor(container, frameworkLoggingManager)
 	facilitiesInitialisor.Logger = frameworkLoggingManager.CreateLogger(facilityInitialisorComponentName)
-	facilitiesInitialisor.Initialise(configAccessor)
 
-	err := container.Populate()
+	err := facilitiesInitialisor.Initialise(configAccessor)
+	i.shutdownIfError(err, container)
 
-	if err != nil {
-		i.logger.LogFatalf(err.Error())
-		i.shutdown(container)
-		os.Exit(1)
-	}
+	err = container.Populate()
+	i.shutdownIfError(err, container)
 
 	runtime.GC()
 
 	err = container.StartComponents()
+	i.shutdownIfError(err, container)
+
+	elapsed := time.Since(start)
+	i.logger.LogInfof("Ready (startup time %s)", elapsed)
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, syscall.SIGTERM)
+
+	go func() {
+		<-c
+		i.shutdown(container)
+		os.Exit(1)
+	}()
+
+	for {
+		time.Sleep(100000000000)
+	}
+}
+
+func (i *Initiator) shutdownIfError(err error, c *ioc.ComponentContainer) {
 
 	if err != nil {
 		i.logger.LogFatalf(err.Error())
-		i.shutdown(container)
-		os.Exit(1)
-	} else {
-		elapsed := time.Since(start)
-		i.logger.LogInfof("Ready (startup time %s)", elapsed)
-
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
-		signal.Notify(c, syscall.SIGTERM)
-
-		go func() {
-			<-c
-			i.shutdown(container)
-			os.Exit(1)
-		}()
-
-		for {
-			time.Sleep(100000000000)
-		}
+		i.shutdown(c)
+		os.Exit(-1)
 	}
+
 }
 
 func (i *Initiator) shutdown(container *ioc.ComponentContainer) {
