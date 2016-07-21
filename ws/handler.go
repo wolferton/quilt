@@ -163,11 +163,10 @@ func (wh *WsHandler) process(jsonReq *WsRequest, w http.ResponseWriter) {
 		wh.writeErrorResponse(errors, w)
 
 	} else {
+		status := wh.StatusDeterminer.DetermineCode(wsRes)
+		w.WriteHeader(status)
 		wh.ResponseWriter.Write(wsRes, w)
 	}
-
-	status := wh.StatusDeterminer.DetermineCode(wsRes)
-	w.WriteHeader(status)
 
 }
 

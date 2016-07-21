@@ -16,10 +16,10 @@ func TypeOfField(i interface{}, name string) reflect.Type {
 	return r.FieldByName(name).Type()
 }
 
-func SetInt(i interface{}, name string, v int) {
+func SetInt64(i interface{}, name string, v int64) {
 	r := reflect.ValueOf(i).Elem()
 	t := r.FieldByName(name)
-	t.SetInt(int64(v))
+	t.SetInt(v)
 }
 
 func TargetFieldIsArray(i interface{}, name string) bool {
