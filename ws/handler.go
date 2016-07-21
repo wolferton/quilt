@@ -75,6 +75,10 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (wh *WsHandler) unmarshall(req *http.Request, wsReq *WsRequest) error {
 
+	if req.ContentLength <= 0 {
+		return nil
+	}
+
 	targetSource, found := wh.Logic.(WsUnmarshallTarget)
 
 	if found {
