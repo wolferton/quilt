@@ -17,7 +17,6 @@ type WsRequest struct {
 	HttpMethod      string
 	RequestBody     interface{}
 	QueryParams     *WsQueryParams
-	BindingErors    []string
 	FrameworkErrors []*WsFrameworkError
 }
 
@@ -50,6 +49,16 @@ func NewUnmarshallWsFrameworkError(message string) *WsFrameworkError {
 	f := new(WsFrameworkError)
 	f.Phase = Unmarshall
 	f.Message = message
+
+	return f
+}
+
+func NewQueryBindFrameworkError(message string, param string, target string) *WsFrameworkError {
+	f := new(WsFrameworkError)
+	f.Phase = QueryBind
+	f.Message = message
+	f.ClientField = param
+	f.TargetField = target
 
 	return f
 }

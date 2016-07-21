@@ -75,19 +75,17 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (wh *WsHandler) unmarshall(req *http.Request, wsReq *WsRequest) error {
 
-	if req.ContentLength <= 0 {
-		return nil
-	}
-
 	targetSource, found := wh.Logic.(WsUnmarshallTarget)
 
 	if found {
 		target := targetSource.UnmarshallTarget()
 		wsReq.RequestBody = target
 
-		err := wh.Unmarshaller.Unmarshall(req, wsReq)
-
-		return err
+		if req.ContentLength == 0 {
+			return nil
+		} else {
+			return wh.Unmarshaller.Unmarshall(req, wsReq)
+		}
 	}
 
 	return nil
@@ -99,8 +97,6 @@ func (wh *WsHandler) processQueryParams(req *http.Request, wsReq *WsRequest) {
 	wsReq.QueryParams = NewWsQueryParams(values)
 
 	if wh.bindQuery {
-		fmt.Println("Binding query")
-
 		if wsReq.RequestBody == nil {
 			wh.QuiltApplicationLogger.LogErrorf("Query parameter binding is enabled, but no target available to bind into. Does your Logic component implement the WsUnmarshallTarget interface?")
 			return
@@ -167,11 +163,12 @@ func (wh *WsHandler) process(jsonReq *WsRequest, w http.ResponseWriter) {
 		wh.writeErrorResponse(errors, w)
 
 	} else {
-		status := wh.StatusDeterminer.DetermineCode(wsRes)
-		w.WriteHeader(status)
+		wh.ResponseWriter.Write(wsRes, w)
 	}
 
-	wh.ResponseWriter.Write(wsRes, w)
+	status := wh.StatusDeterminer.DetermineCode(wsRes)
+	w.WriteHeader(status)
+
 }
 
 func (wh *WsHandler) writeErrorResponse(errors *ServiceErrors, w http.ResponseWriter) {

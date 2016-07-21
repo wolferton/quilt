@@ -64,7 +64,7 @@ func (djerw *DefaultAbnormalResponseWriter) WriteWithErrors(status int, errors *
 
 func (djerw *DefaultAbnormalResponseWriter) formatErrors(errors *ws.ServiceErrors) interface{} {
 
-	f := make(map[string]string)
+	f := make(map[string][]string)
 
 	for _, error := range errors.Errors {
 
@@ -83,7 +83,10 @@ func (djerw *DefaultAbnormalResponseWriter) formatErrors(errors *ws.ServiceError
 			c = "C"
 		}
 
-		f[c+"-"+error.Label] = error.Message
+		k := c + "-" + error.Label
+		a := f[k]
+
+		f[k] = append(a, error.Message)
 	}
 
 	return f
@@ -101,4 +104,9 @@ func wrapJsonResponse(errors interface{}, body interface{}) interface{} {
 	}
 
 	return f
+}
+
+type JsonWrapper struct {
+	Response interface{}
+	Errors   interface{}
 }
