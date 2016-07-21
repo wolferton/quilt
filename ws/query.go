@@ -102,6 +102,20 @@ func (qp *WsQueryParams) IntNValue(key string, bits int) (int64, error) {
 
 }
 
+func (qp *WsQueryParams) UIntNValue(key string, bits int) (uint64, error) {
+
+	v := qp.values[key]
+
+	if v == nil {
+		return 0, qp.noVal(key)
+	}
+
+	i, err := strconv.ParseUint(v[len(v)-1], 10, bits)
+
+	return i, err
+
+}
+
 func (qp *WsQueryParams) noVal(key string) error {
 	message := fmt.Sprintf("No value available for key %s", key)
 	return errors.New(message)
@@ -148,10 +162,46 @@ func (qb *QueryBinder) bindValueToField(paramName string, fieldName string, qp *
 		return qb.setIntNField(paramName, fieldName, qp, t, 32)
 	case reflect.Int64:
 		return qb.setIntNField(paramName, fieldName, qp, t, 64)
+	case reflect.Bool:
+		return qb.setBoolField(paramName, fieldName, qp, t)
+	case reflect.String:
+		return qb.setStringField(paramName, fieldName, qp, t)
+	case reflect.Uint8:
+		return qb.setUintNField(paramName, fieldName, qp, t, 8)
+	case reflect.Uint16:
+		return qb.setUintNField(paramName, fieldName, qp, t, 16)
+	case reflect.Uint32:
+		return qb.setUintNField(paramName, fieldName, qp, t, 32)
+	case reflect.Uint64:
+		return qb.setUintNField(paramName, fieldName, qp, t, 64)
 	}
 
 	return nil
 
+}
+
+func (qb *QueryBinder) setStringField(paramName string, fieldName string, qp *WsQueryParams, t interface{}) *WsFrameworkError {
+	s, err := qp.StringValue(paramName)
+
+	if err != nil {
+		return NewQueryBindFrameworkError(err.Error(), paramName, fieldName)
+	}
+
+	rt.SetString(t, fieldName, s)
+
+	return nil
+}
+
+func (qb *QueryBinder) setBoolField(paramName string, fieldName string, qp *WsQueryParams, t interface{}) *WsFrameworkError {
+	b, err := qp.BoolValue(paramName)
+
+	if err != nil {
+		return NewQueryBindFrameworkError(err.Error(), paramName, fieldName)
+	}
+
+	rt.SetBool(t, fieldName, b)
+
+	return nil
 }
 
 func (qb *QueryBinder) setIntField(paramName string, fieldName string, qp *WsQueryParams, t interface{}) *WsFrameworkError {
@@ -174,6 +224,18 @@ func (qb *QueryBinder) setIntNField(paramName string, fieldName string, qp *WsQu
 	}
 
 	rt.SetInt64(t, fieldName, i)
+
+	return nil
+}
+
+func (qb *QueryBinder) setUintNField(paramName string, fieldName string, qp *WsQueryParams, t interface{}, bits int) *WsFrameworkError {
+	i, err := qp.UIntNValue(paramName, bits)
+
+	if err != nil {
+		return NewQueryBindFrameworkError(err.Error(), paramName, fieldName)
+	}
+
+	rt.SetUint64(t, fieldName, i)
 
 	return nil
 }
