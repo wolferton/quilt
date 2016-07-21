@@ -11,27 +11,11 @@ type DefaultJsonUnmarshaller struct {
 	FrameworkLogger logging.Logger
 }
 
-func (jdu *DefaultJsonUnmarshaller) Unmarshall(httpReq *http.Request, logic interface{}) (*ws.WsRequest, error) {
+func (jdu *DefaultJsonUnmarshaller) Unmarshall(req *http.Request, wsReq *ws.WsRequest) error {
 
-	var wsReq ws.WsRequest
+	err := json.NewDecoder(req.Body).Decode(&wsReq.RequestBody)
 
-	targetSource, found := logic.(ws.WsUnmarshallTarget)
-
-	if found {
-		target := targetSource.UnmarshallTarget()
-		err := json.NewDecoder(httpReq.Body).Decode(&target)
-
-		if err != nil {
-			return nil, err
-		}
-
-		wsReq.RequestBody = target
-
-	}
-
-	wsReq.HttpMethod = httpReq.Method
-
-	return &wsReq, nil
+	return err
 
 }
 

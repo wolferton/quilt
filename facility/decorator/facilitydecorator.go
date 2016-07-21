@@ -3,24 +3,13 @@ package decorator
 import (
 	"github.com/wolferton/quilt/ioc"
 	"github.com/wolferton/quilt/logging"
+	"github.com/wolferton/quilt/reflecttools"
 	"reflect"
 )
 
 //TODO Rename application log var
 const expectedApplicationLoggerFieldName string = "QuiltApplicationLogger"
 const expectedFrameworkLoggerFieldName string = "FrameworkLogger"
-
-func HasFieldOfName(component *ioc.Component, fieldName string) bool {
-	reflectComponent := reflect.ValueOf(component.Instance).Elem()
-	reflectFieldOfInterest := reflectComponent.FieldByName(fieldName)
-
-	return reflectFieldOfInterest.IsValid()
-}
-
-func TypeOfField(component *ioc.Component, name string) reflect.Type {
-	reflectComponent := reflect.ValueOf(component.Instance).Elem()
-	return reflectComponent.FieldByName(name).Type()
-}
 
 type ApplicationLogDecorator struct {
 	LoggerManager   *logging.ComponentLoggerManager
@@ -29,7 +18,7 @@ type ApplicationLogDecorator struct {
 
 func (ald *ApplicationLogDecorator) OfInterest(component *ioc.Component) bool {
 
-	result := HasFieldOfName(component, expectedApplicationLoggerFieldName)
+	result := reflecttools.HasFieldOfName(component.Instance, expectedApplicationLoggerFieldName)
 
 	frameworkLog := ald.FrameworkLogger
 
@@ -48,7 +37,7 @@ func (ald *ApplicationLogDecorator) OfInterest(component *ioc.Component) bool {
 func (ald *ApplicationLogDecorator) DecorateComponent(component *ioc.Component, container *ioc.ComponentContainer) {
 	logger := ald.LoggerManager.CreateLogger(component.Name)
 
-	targetFieldType := TypeOfField(component, expectedApplicationLoggerFieldName)
+	targetFieldType := reflecttools.TypeOfField(component.Instance, expectedApplicationLoggerFieldName)
 	typeOfLogger := reflect.TypeOf(logger)
 
 	if typeOfLogger.AssignableTo(targetFieldType) {
@@ -67,7 +56,7 @@ type FrameworkLogDecorator struct {
 
 func (fld *FrameworkLogDecorator) OfInterest(component *ioc.Component) bool {
 
-	result := HasFieldOfName(component, expectedFrameworkLoggerFieldName)
+	result := reflecttools.HasFieldOfName(component.Instance, expectedFrameworkLoggerFieldName)
 
 	frameworkLog := fld.FrameworkLogger
 
@@ -86,7 +75,7 @@ func (fld *FrameworkLogDecorator) OfInterest(component *ioc.Component) bool {
 func (fld *FrameworkLogDecorator) DecorateComponent(component *ioc.Component, container *ioc.ComponentContainer) {
 	logger := fld.LoggerManager.CreateLogger(component.Name)
 
-	targetFieldType := TypeOfField(component, expectedFrameworkLoggerFieldName)
+	targetFieldType := reflecttools.TypeOfField(component.Instance, expectedFrameworkLoggerFieldName)
 	typeOfLogger := reflect.TypeOf(logger)
 
 	if typeOfLogger.AssignableTo(targetFieldType) {

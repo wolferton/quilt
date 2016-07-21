@@ -67,7 +67,7 @@ type WsUnmarshallTarget interface {
 }
 
 type WsUnmarshaller interface {
-	Unmarshall(req *http.Request, logic interface{}) (*WsRequest, error)
+	Unmarshall(req *http.Request, wsReq *WsRequest) error
 }
 
 type WsResponseWriter interface {

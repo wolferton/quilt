@@ -3,6 +3,7 @@ package ws
 import (
 	"errors"
 	"fmt"
+	"github.com/wolferton/quilt/logging"
 	"net/url"
 	"strconv"
 )
@@ -63,6 +64,10 @@ func (qp *WsQueryParams) noVal(key string) error {
 	return errors.New(message)
 }
 
-func BindQueryParams(qp *WsQueryParams, req *WsRequest, bindings map[string]string) {
+type QueryBinder struct {
+	FrameworkLogger logging.Logger
+}
+
+func (qb *QueryBinder) AutoBind(wsReq *WsRequest) {
 
 }

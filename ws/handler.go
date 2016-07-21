@@ -21,7 +21,12 @@ type WsHandler struct {
 	RevealPanicDetails     bool
 	DisableQueryParsing    bool
 	DeferUnmarshalError    bool
-	BindQueryParams        map[string]string
+	BindQueryParams        map[string][]string
+	QueryBinder            *QueryBinder
+	AutoBindQuery          bool
+	validate               bool
+	validator              WsRequestValidator
+	bindQuery              bool
 }
 
 func (wh *WsHandler) ProvideErrorFinder(finder ServiceErrorFinder) {
@@ -37,8 +42,10 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
-	logic := wh.Logic
-	wsReq, err := wh.Unmarshaller.Unmarshall(req, logic)
+	wsReq := new(WsRequest)
+	wsReq.HttpMethod = req.Method
+
+	err := wh.unmarshall(req, wsReq)
 
 	if err != nil {
 		wh.handleUnmarshallError(err, w, wsReq)
@@ -52,10 +59,8 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var errors ServiceErrors
 	errors.ErrorFinder = wh.ErrorFinder
 
-	validator, found := logic.(WsRequestValidator)
-
-	if found {
-		validator.Validate(&errors, wsReq)
+	if wh.validate {
+		wh.validator.Validate(&errors, wsReq)
 	}
 
 	if errors.HasErrors() {
@@ -68,13 +73,39 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 }
 
+func (wh *WsHandler) unmarshall(req *http.Request, wsReq *WsRequest) error {
+
+	targetSource, found := wh.Logic.(WsUnmarshallTarget)
+
+	if found {
+		target := targetSource.UnmarshallTarget()
+		wsReq.RequestBody = target
+
+		err := wh.Unmarshaller.Unmarshall(req, wsReq)
+
+		return err
+	}
+
+	return nil
+}
+
 func (wh *WsHandler) processQueryParams(req *http.Request, wsReq *WsRequest) {
 
 	values := req.URL.Query()
 	wsReq.QueryParams = NewWsQueryParams(values)
 
-	if wsReq.RequestBody != nil && wh.BindQueryParams != nil {
-		//err := BindQueryParams
+	if wh.bindQuery {
+		fmt.Println("Binding query")
+
+		if wsReq.RequestBody == nil {
+			wh.QuiltApplicationLogger.LogErrorf("Query parameter binding is enabled, but no target available to bind into. Does your Logic component implement the WsUnmarshallTarget interface?")
+			return
+		}
+
+		if wh.AutoBindQuery {
+			wh.QueryBinder.AutoBind(wsReq)
+		}
+
 	}
 
 }
@@ -178,4 +209,20 @@ func (wh *WsHandler) writePanicResponse(r interface{}, w http.ResponseWriter) {
 	se.AddError(Unexpected, "UNXP", message)
 
 	wh.writeErrorResponse(&se, w)
+}
+
+func (wh *WsHandler) StartComponent() error {
+
+	validator, found := wh.Logic.(WsRequestValidator)
+
+	wh.validate = found
+
+	if found {
+		wh.validator = validator
+	}
+
+	wh.bindQuery = wh.AutoBindQuery || (wh.BindQueryParams != nil && len(wh.BindQueryParams) > 0)
+
+	return nil
+
 }

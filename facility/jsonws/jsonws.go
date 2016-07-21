@@ -13,6 +13,7 @@ const jsonUnmarshallerComponentName = ioc.FrameworkPrefix + "JsonUnmarshaller"
 const jsonAbnormalResponseWriterComponentName = ioc.FrameworkPrefix + "JsonAbnormalResponseWriter"
 const jsonHandlerDecoratorComponentName = ioc.FrameworkPrefix + "JsonHandlerDecorator"
 const wsHttpStatusDeterminerComponentName = ioc.FrameworkPrefix + "HttpStatusDeterminer"
+const wsQueryBinderComponentName = ioc.FrameworkPrefix + "QueryBinder"
 
 type JsonWsFacilityBuilder struct {
 }
@@ -25,6 +26,9 @@ func (fb *JsonWsFacilityBuilder) BuildAndRegister(lm *logging.ComponentLoggerMan
 	abnormalResponseWriter := new(json.DefaultAbnormalResponseWriter)
 	cn.WrapAndAddProto(jsonAbnormalResponseWriterComponentName, abnormalResponseWriter)
 
+	queryBinder := new(ws.QueryBinder)
+	cn.WrapAndAddProto(wsQueryBinderComponentName, queryBinder)
+
 	statusDeterminer := new(ws.DefaultHttpStatusCodeDeterminer)
 	cn.WrapAndAddProto(wsHttpStatusDeterminerComponentName, statusDeterminer)
 
@@ -32,7 +36,7 @@ func (fb *JsonWsFacilityBuilder) BuildAndRegister(lm *logging.ComponentLoggerMan
 	cn.WrapAndAddProto(jsonUnmarshallerComponentName, jsonUnmarshaller)
 
 	decoratorLogger := lm.CreateLogger(jsonHandlerDecoratorComponentName)
-	decorator := JsonWsHandlerDecorator{decoratorLogger, responseWriter, abnormalResponseWriter, statusDeterminer, jsonUnmarshaller}
+	decorator := JsonWsHandlerDecorator{decoratorLogger, responseWriter, abnormalResponseWriter, statusDeterminer, jsonUnmarshaller, queryBinder}
 	cn.WrapAndAddProto(jsonHandlerDecoratorComponentName, &decorator)
 }
 
@@ -50,6 +54,7 @@ type JsonWsHandlerDecorator struct {
 	ErrorResponseWriter  ws.WsAbnormalResponseWriter
 	StatusCodeDeterminer ws.HttpStatusCodeDeterminer
 	Unmarshaller         ws.WsUnmarshaller
+	QueryBinder          *ws.QueryBinder
 }
 
 func (jwhd *JsonWsHandlerDecorator) OfInterest(component *ioc.Component) bool {
@@ -82,6 +87,10 @@ func (jwhd *JsonWsHandlerDecorator) DecorateComponent(component *ioc.Component, 
 	if h.Unmarshaller == nil {
 		l.LogTracef("%s needs Unmarshaller", component.Name)
 		h.Unmarshaller = jwhd.Unmarshaller
+	}
+
+	if h.QueryBinder == nil {
+		h.QueryBinder = jwhd.QueryBinder
 	}
 
 }
