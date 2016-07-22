@@ -22,7 +22,7 @@ type WsHandler struct {
 	DisableQueryParsing    bool
 	DeferUnmarshalError    bool
 	BindQueryParams        map[string][]string
-	QueryBinder            *QueryBinder
+	QueryBinder            *ParamBinder
 	AutoBindQuery          bool
 	validate               bool
 	validator              WsRequestValidator

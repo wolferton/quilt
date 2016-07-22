@@ -26,7 +26,7 @@ func (fb *JsonWsFacilityBuilder) BuildAndRegister(lm *logging.ComponentLoggerMan
 	abnormalResponseWriter := new(json.DefaultAbnormalResponseWriter)
 	cn.WrapAndAddProto(jsonAbnormalResponseWriterComponentName, abnormalResponseWriter)
 
-	queryBinder := new(ws.QueryBinder)
+	queryBinder := new(ws.ParamBinder)
 	cn.WrapAndAddProto(wsQueryBinderComponentName, queryBinder)
 
 	statusDeterminer := new(ws.DefaultHttpStatusCodeDeterminer)
@@ -54,7 +54,7 @@ type JsonWsHandlerDecorator struct {
 	ErrorResponseWriter  ws.WsAbnormalResponseWriter
 	StatusCodeDeterminer ws.HttpStatusCodeDeterminer
 	Unmarshaller         ws.WsUnmarshaller
-	QueryBinder          *ws.QueryBinder
+	QueryBinder          *ws.ParamBinder
 }
 
 func (jwhd *JsonWsHandlerDecorator) OfInterest(component *ioc.Component) bool {
