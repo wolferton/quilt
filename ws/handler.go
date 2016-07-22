@@ -25,7 +25,7 @@ type WsHandler struct {
 	DeferUnmarshalError    bool
 	BindQueryParams        map[string][]string
 	BindPathParams         []string
-	QueryBinder            *ParamBinder
+	ParamBinder            *ParamBinder
 	AutoBindQuery          bool
 	validate               bool
 	validator              WsRequestValidator
@@ -106,8 +106,8 @@ func (wh *WsHandler) processPathParams(req *http.Request, wsReq *WsRequest) {
 	wsReq.PathParams = params[1:]
 
 	if wh.bindPathParams {
-		pp := NewWsQueryParamsForPath(wh.BindPathParams, wsReq.PathParams)
-		wh.QueryBinder.AutoBindPathParameters(wsReq, pp)
+		pp := NewWsParamsForPath(wh.BindPathParams, wsReq.PathParams)
+		wh.ParamBinder.AutoBindPathParameters(wsReq, pp)
 	}
 
 }
@@ -119,7 +119,7 @@ func (wh *WsHandler) processQueryParams(req *http.Request, wsReq *WsRequest) {
 	}
 
 	values := req.URL.Query()
-	wsReq.QueryParams = NewWsQueryParams(values)
+	wsReq.QueryParams = NewWsParamsForQuery(values)
 
 	if wh.bindQuery {
 		if wsReq.RequestBody == nil {
@@ -128,7 +128,7 @@ func (wh *WsHandler) processQueryParams(req *http.Request, wsReq *WsRequest) {
 		}
 
 		if wh.AutoBindQuery {
-			wh.QueryBinder.AutoBindQueryParameters(wsReq)
+			wh.ParamBinder.AutoBindQueryParameters(wsReq)
 		}
 
 	}

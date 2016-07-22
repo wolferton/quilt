@@ -89,8 +89,8 @@ func (jwhd *JsonWsHandlerDecorator) DecorateComponent(component *ioc.Component, 
 		h.Unmarshaller = jwhd.Unmarshaller
 	}
 
-	if h.QueryBinder == nil {
-		h.QueryBinder = jwhd.QueryBinder
+	if h.ParamBinder == nil {
+		h.ParamBinder = jwhd.QueryBinder
 	}
 
 }

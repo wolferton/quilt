@@ -14,7 +14,7 @@ type ParamBinder struct {
 	FrameworkLogger logging.Logger
 }
 
-func (pb *ParamBinder) AutoBindPathParameters(wsReq *WsRequest, p *WsQueryParams) {
+func (pb *ParamBinder) AutoBindPathParameters(wsReq *WsRequest, p *WsParams) {
 
 	t := wsReq.RequestBody
 
@@ -79,7 +79,7 @@ func (pb *ParamBinder) pathParamError(paramName string, fieldName string, typeNa
 
 }
 
-func (pb *ParamBinder) bindValueToField(paramName string, fieldName string, p *WsQueryParams, t interface{}, errorFn bindError) *WsFrameworkError {
+func (pb *ParamBinder) bindValueToField(paramName string, fieldName string, p *WsParams, t interface{}, errorFn bindError) *WsFrameworkError {
 
 	switch rt.TypeOfField(t, fieldName).Kind() {
 	case reflect.Int:
@@ -115,7 +115,7 @@ func (pb *ParamBinder) bindValueToField(paramName string, fieldName string, p *W
 
 }
 
-func (pb *ParamBinder) setStringField(paramName string, fieldName string, qp *WsQueryParams, t interface{}, errorFn bindError) *WsFrameworkError {
+func (pb *ParamBinder) setStringField(paramName string, fieldName string, qp *WsParams, t interface{}, errorFn bindError) *WsFrameworkError {
 	s, err := qp.StringValue(paramName)
 
 	if err != nil {
@@ -127,7 +127,7 @@ func (pb *ParamBinder) setStringField(paramName string, fieldName string, qp *Ws
 	return nil
 }
 
-func (pb *ParamBinder) setBoolField(paramName string, fieldName string, qp *WsQueryParams, t interface{}, errorFn bindError) *WsFrameworkError {
+func (pb *ParamBinder) setBoolField(paramName string, fieldName string, qp *WsParams, t interface{}, errorFn bindError) *WsFrameworkError {
 	b, err := qp.BoolValue(paramName)
 
 	if err != nil {
@@ -138,7 +138,7 @@ func (pb *ParamBinder) setBoolField(paramName string, fieldName string, qp *WsQu
 	return nil
 }
 
-func (pb *ParamBinder) setIntNField(paramName string, fieldName string, qp *WsQueryParams, t interface{}, bits int, errorFn bindError) *WsFrameworkError {
+func (pb *ParamBinder) setIntNField(paramName string, fieldName string, qp *WsParams, t interface{}, bits int, errorFn bindError) *WsFrameworkError {
 	i, err := qp.IntNValue(paramName, bits)
 
 	if err != nil {
@@ -149,7 +149,7 @@ func (pb *ParamBinder) setIntNField(paramName string, fieldName string, qp *WsQu
 	return nil
 }
 
-func (pb *ParamBinder) setFloatNField(paramName string, fieldName string, qp *WsQueryParams, t interface{}, bits int, errorFn bindError) *WsFrameworkError {
+func (pb *ParamBinder) setFloatNField(paramName string, fieldName string, qp *WsParams, t interface{}, bits int, errorFn bindError) *WsFrameworkError {
 	i, err := qp.FloatNValue(paramName, bits)
 
 	if err != nil {
@@ -160,7 +160,7 @@ func (pb *ParamBinder) setFloatNField(paramName string, fieldName string, qp *Ws
 	return nil
 }
 
-func (pb *ParamBinder) setUintNField(paramName string, fieldName string, qp *WsQueryParams, t interface{}, bits int, errorFn bindError) *WsFrameworkError {
+func (pb *ParamBinder) setUintNField(paramName string, fieldName string, qp *WsParams, t interface{}, bits int, errorFn bindError) *WsFrameworkError {
 	i, err := qp.UIntNValue(paramName, bits)
 
 	if err != nil {

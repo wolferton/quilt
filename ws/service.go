@@ -16,7 +16,7 @@ type WsRequest struct {
 	PathParameters  map[string]string
 	HttpMethod      string
 	RequestBody     interface{}
-	QueryParams     *WsQueryParams
+	QueryParams     *WsParams
 	PathParams      []string
 	FrameworkErrors []*WsFrameworkError
 	populatedFields map[string]bool
