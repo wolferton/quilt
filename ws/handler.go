@@ -103,7 +103,7 @@ func (wh *WsHandler) processQueryParams(req *http.Request, wsReq *WsRequest) {
 		}
 
 		if wh.AutoBindQuery {
-			wh.QueryBinder.AutoBind(wsReq)
+			wh.QueryBinder.AutoBindQueryParameters(wsReq)
 		}
 
 	}

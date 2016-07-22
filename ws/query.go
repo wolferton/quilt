@@ -74,20 +74,6 @@ func (qp *WsQueryParams) BoolValue(key string) (bool, error) {
 
 }
 
-func (qp *WsQueryParams) IntValue(key string) (int, error) {
-
-	v := qp.values[key]
-
-	if v == nil {
-		return 0, qp.noVal(key)
-	}
-
-	i, err := strconv.Atoi(v[len(v)-1])
-
-	return i, err
-
-}
-
 func (qp *WsQueryParams) IntNValue(key string, bits int) (int64, error) {
 
 	v := qp.values[key]
@@ -125,15 +111,22 @@ type QueryBinder struct {
 	FrameworkLogger logging.Logger
 }
 
-func (qb *QueryBinder) AutoBind(wsReq *WsRequest) {
+func (qb *QueryBinder) AutoBindQueryParameters(wsReq *WsRequest) {
 
 	t := wsReq.RequestBody
-	qp := wsReq.QueryParams
+	p := wsReq.QueryParams
 
-	for _, field := range qp.ParamNames() {
+	for _, paramName := range p.ParamNames() {
 
-		if rt.HasFieldOfName(t, field) {
-			fErr := qb.bindValueToField(field, field, qp, t)
+		if rt.HasFieldOfName(t, paramName) {
+
+			if !rt.TargetFieldIsArray(t, paramName) && p.MultipleValues(paramName) {
+				message := fmt.Sprintf("Multiple values for query parameter %s. The target field can only accept a single value.", paramName)
+				wsReq.AddFrameworkError(NewQueryBindFrameworkError(message, paramName, paramName))
+				continue
+			}
+
+			fErr := qb.bindValueToField(paramName, paramName, p, t)
 
 			if fErr != nil {
 				wsReq.AddFrameworkError(fErr)
@@ -144,36 +137,38 @@ func (qb *QueryBinder) AutoBind(wsReq *WsRequest) {
 	}
 }
 
-func (qb *QueryBinder) bindValueToField(paramName string, fieldName string, qp *WsQueryParams, t interface{}) *WsFrameworkError {
+func (qb *QueryBinder) queryParamError(paramName string, fieldName string, typeName string) *WsFrameworkError {
 
-	if !rt.TargetFieldIsArray(t, fieldName) && qp.MultipleValues(paramName) {
-		message := fmt.Sprintf("Multiple values for query parameter %s, but the target field can only accept a single value.", fieldName)
-		return NewQueryBindFrameworkError(message, paramName, fieldName)
-	}
+	message := fmt.Sprintf("Unable to convert the value of query parameter %s to %s", paramName, typeName)
+	return NewQueryBindFrameworkError(message, paramName, fieldName)
+
+}
+
+func (qb *QueryBinder) bindValueToField(paramName string, fieldName string, p *WsQueryParams, t interface{}) *WsFrameworkError {
 
 	switch rt.TypeOfField(t, fieldName).Kind() {
 	case reflect.Int:
-		return qb.setIntField(paramName, fieldName, qp, t)
+		return qb.setIntNField(paramName, fieldName, p, t, 0)
 	case reflect.Int8:
-		return qb.setIntNField(paramName, fieldName, qp, t, 8)
+		return qb.setIntNField(paramName, fieldName, p, t, 8)
 	case reflect.Int16:
-		return qb.setIntNField(paramName, fieldName, qp, t, 16)
+		return qb.setIntNField(paramName, fieldName, p, t, 16)
 	case reflect.Int32:
-		return qb.setIntNField(paramName, fieldName, qp, t, 32)
+		return qb.setIntNField(paramName, fieldName, p, t, 32)
 	case reflect.Int64:
-		return qb.setIntNField(paramName, fieldName, qp, t, 64)
+		return qb.setIntNField(paramName, fieldName, p, t, 64)
 	case reflect.Bool:
-		return qb.setBoolField(paramName, fieldName, qp, t)
+		return qb.setBoolField(paramName, fieldName, p, t)
 	case reflect.String:
-		return qb.setStringField(paramName, fieldName, qp, t)
+		return qb.setStringField(paramName, fieldName, p, t)
 	case reflect.Uint8:
-		return qb.setUintNField(paramName, fieldName, qp, t, 8)
+		return qb.setUintNField(paramName, fieldName, p, t, 8)
 	case reflect.Uint16:
-		return qb.setUintNField(paramName, fieldName, qp, t, 16)
+		return qb.setUintNField(paramName, fieldName, p, t, 16)
 	case reflect.Uint32:
-		return qb.setUintNField(paramName, fieldName, qp, t, 32)
+		return qb.setUintNField(paramName, fieldName, p, t, 32)
 	case reflect.Uint64:
-		return qb.setUintNField(paramName, fieldName, qp, t, 64)
+		return qb.setUintNField(paramName, fieldName, p, t, 64)
 	}
 
 	return nil
@@ -200,19 +195,6 @@ func (qb *QueryBinder) setBoolField(paramName string, fieldName string, qp *WsQu
 	}
 
 	rt.SetBool(t, fieldName, b)
-
-	return nil
-}
-
-func (qb *QueryBinder) setIntField(paramName string, fieldName string, qp *WsQueryParams, t interface{}) *WsFrameworkError {
-	i, err := qp.IntValue(paramName)
-
-	if err != nil {
-		return NewQueryBindFrameworkError(err.Error(), paramName, fieldName)
-	}
-
-	rt.SetInt64(t, fieldName, int64(i))
-
 	return nil
 }
 
@@ -224,7 +206,6 @@ func (qb *QueryBinder) setIntNField(paramName string, fieldName string, qp *WsQu
 	}
 
 	rt.SetInt64(t, fieldName, i)
-
 	return nil
 }
 
@@ -236,6 +217,5 @@ func (qb *QueryBinder) setUintNField(paramName string, fieldName string, qp *WsQ
 	}
 
 	rt.SetUint64(t, fieldName, i)
-
 	return nil
 }
