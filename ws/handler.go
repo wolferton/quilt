@@ -21,6 +21,7 @@ type WsHandler struct {
 	ErrorFinder            ServiceErrorFinder
 	RevealPanicDetails     bool
 	DisableQueryParsing    bool
+	DisablePathParsing     bool
 	DeferUnmarshalError    bool
 	BindQueryParams        map[string][]string
 	BindPathParams         []string
@@ -57,6 +58,7 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	wh.processQueryParams(req, wsReq)
+	wh.processPathParams(req, wsReq)
 
 	var errors ServiceErrors
 	errors.ErrorFinder = wh.ErrorFinder
@@ -94,6 +96,19 @@ func (wh *WsHandler) unmarshall(req *http.Request, wsReq *WsRequest) error {
 }
 
 func (wh *WsHandler) processPathParams(req *http.Request, wsReq *WsRequest) {
+
+	if wh.DisablePathParsing {
+		return
+	}
+
+	re := wh.pathRegex
+	params := re.FindStringSubmatch(req.URL.Path)
+	wsReq.PathParams = params[1:]
+
+	if wh.bindPathParams {
+		pp := NewWsQueryParamsForPath(wh.BindPathParams, wsReq.PathParams)
+		wh.QueryBinder.AutoBindPathParameters(wsReq, pp)
+	}
 
 }
 
@@ -233,7 +248,9 @@ func (wh *WsHandler) StartComponent() error {
 
 	wh.bindQuery = wh.AutoBindQuery || (wh.BindQueryParams != nil && len(wh.BindQueryParams) > 0)
 
-	if len(wh.BindPathParams) > 0 {
+	if !wh.DisablePathParsing {
+
+		wh.bindPathParams = len(wh.BindPathParams) > 0
 
 		r, err := regexp.Compile(wh.PathMatchPattern)
 

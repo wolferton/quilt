@@ -14,6 +14,29 @@ type ParamBinder struct {
 	FrameworkLogger logging.Logger
 }
 
+func (pb *ParamBinder) AutoBindPathParameters(wsReq *WsRequest, p *WsQueryParams) {
+
+	t := wsReq.RequestBody
+
+	for _, fieldName := range p.ParamNames() {
+
+		if rt.HasFieldOfName(t, fieldName) {
+			fErr := pb.bindValueToField(fieldName, fieldName, p, t, pb.pathParamError)
+
+			if fErr != nil {
+				wsReq.AddFrameworkError(fErr)
+			} else {
+				wsReq.RecordFieldAsPopulated(fieldName)
+			}
+
+		} else {
+			pb.FrameworkLogger.LogWarnf("No field %s exists on a target object to bind a path parameter into.", fieldName)
+		}
+
+	}
+
+}
+
 func (pb *ParamBinder) AutoBindQueryParameters(wsReq *WsRequest) {
 
 	t := wsReq.RequestBody
@@ -46,6 +69,13 @@ func (pb *ParamBinder) queryParamError(paramName string, fieldName string, typeN
 
 	message := fmt.Sprintf("Unable to convert the value of query parameter %s to %s", paramName, typeName)
 	return NewQueryBindFrameworkError(message, paramName, fieldName)
+
+}
+
+func (pb *ParamBinder) pathParamError(paramName string, fieldName string, typeName string) *WsFrameworkError {
+
+	message := fmt.Sprintf("Unable to convert the value of a path parameter to %s. Check the format of your request path", typeName)
+	return NewPathBindFrameworkError(message, fieldName)
 
 }
 

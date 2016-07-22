@@ -7,6 +7,29 @@ import (
 	"strconv"
 )
 
+func NewWsQueryParamsForPath(keys []string, values []string) *WsQueryParams {
+
+	contents := make(url.Values)
+	v := len(values)
+	var names []string
+
+	for i, k := range keys {
+
+		if i < v {
+			contents[k] = []string{values[i]}
+			names = append(names, k)
+		}
+
+	}
+
+	p := new(WsQueryParams)
+	p.values = contents
+	p.paramNames = names
+
+	return p
+
+}
+
 func NewWsQueryParams(values url.Values) *WsQueryParams {
 
 	qp := new(WsQueryParams)

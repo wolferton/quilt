@@ -17,6 +17,7 @@ type WsRequest struct {
 	HttpMethod      string
 	RequestBody     interface{}
 	QueryParams     *WsQueryParams
+	PathParams      []string
 	FrameworkErrors []*WsFrameworkError
 	populatedFields map[string]bool
 }
@@ -71,6 +72,15 @@ func NewQueryBindFrameworkError(message string, param string, target string) *Ws
 	f.Phase = QueryBind
 	f.Message = message
 	f.ClientField = param
+	f.TargetField = target
+
+	return f
+}
+
+func NewPathBindFrameworkError(message string, target string) *WsFrameworkError {
+	f := new(WsFrameworkError)
+	f.Phase = PathBind
+	f.Message = message
 	f.TargetField = target
 
 	return f
