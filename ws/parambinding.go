@@ -33,6 +33,8 @@ func (pb *ParamBinder) AutoBindQueryParameters(wsReq *WsRequest) {
 
 			if fErr != nil {
 				wsReq.AddFrameworkError(fErr)
+			} else {
+				wsReq.RecordFieldAsPopulated(paramName)
 			}
 
 		}
