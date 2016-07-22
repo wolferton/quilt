@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/wolferton/quilt/config"
 	"github.com/wolferton/quilt/facility/jsonmerger"
-	"github.com/wolferton/quilt/facility/logger"
+	"github.com/wolferton/quilt/logging"
 	"os"
 	"path"
 	"strconv"
@@ -66,7 +66,7 @@ func splitConfigPaths(pathArgument string) []string {
 }
 
 type CreateBindingsCommand struct {
-	logger               logger.Logger
+	logger               logging.Logger
 	OutputFile           string
 	ComponentDefinitions []string
 	LogLevel             string
@@ -81,7 +81,7 @@ func (cbc *CreateBindingsCommand) Execute() int {
 
 	mergedConfig := jsonMerger.LoadAndMergeConfig(cbc.ComponentDefinitions)
 
-	configAccessor := config.ConfigAccessor{mergedConfig}
+	configAccessor := config.ConfigAccessor{mergedConfig, nil}
 
 	cbc.writeBindingsSource(cbc.OutputFile, &configAccessor)
 
@@ -89,9 +89,9 @@ func (cbc *CreateBindingsCommand) Execute() int {
 }
 
 func (cbc *CreateBindingsCommand) configureLogging() {
-	logLevel := logger.LogLevelFromLabel(cbc.LogLevel)
+	logLevel := logging.LogLevelFromLabel(cbc.LogLevel)
 
-	logger := new(logger.LevelAwareLogger)
+	logger := new(logging.LevelAwareLogger)
 
 	logger.SetThreshold(logLevel)
 	logger.SetLoggerName("")
@@ -147,8 +147,15 @@ func (cbc *CreateBindingsCommand) writeBindingsSource(outPath string, configAcce
 					cbc.writeStringValue(writer, instanceVariableName, fieldName, fieldContents.(string), componentProtoName)
 				case config.JsonBool:
 					cbc.writeBoolValue(writer, instanceVariableName, fieldName, fieldContents.(bool), componentProtoName)
+				case config.JsonArray:
+					cbc.writeArray(writer, instanceVariableName, fieldName, fieldContents.([]interface{}), componentProtoName)
 				case config.JsonUnknown:
-					cbc.logger.LogErrorf("Unknown JSON type for field %s on component %s", fieldName, name)
+
+					switch t := fieldContents.(type) {
+					default:
+						cbc.logger.LogErrorf("Unknown JSON type for field %s on component %s %T", fieldName, name, t)
+						os.Exit(-1)
+					}
 				}
 
 			}
@@ -164,13 +171,58 @@ func (cbc *CreateBindingsCommand) writeBindingsSource(outPath string, configAcce
 	writer.Flush()
 }
 
+func (cbc *CreateBindingsCommand) writeArray(writer *bufio.Writer, instanceName string, fieldName string, fieldContents []interface{}, componentProtoName string) {
+
+	cbc.writeAssignmentPrefix(writer, instanceName, fieldName)
+
+	if cbc.allStrings(fieldContents) {
+		cbc.writeStringArrayContents(writer, fieldContents)
+	} else {
+		cbc.logger.LogErrorf("Unsupported data types in array %#v", fieldContents)
+		os.Exit(-1)
+	}
+
+}
+
+func (cbc *CreateBindingsCommand) writeStringArrayContents(w *bufio.Writer, a []interface{}) {
+
+	w.WriteString(" []string{")
+
+	last := len(a) - 1
+
+	for i, s := range a {
+
+		w.WriteString(fmt.Sprintf("%q", s.(string)))
+
+		if i != last {
+			w.WriteString(", ")
+		}
+
+	}
+
+	w.WriteString("}\n")
+
+}
+
+func (cbc *CreateBindingsCommand) allStrings(a []interface{}) bool {
+
+	for _, i := range a {
+
+		switch i.(type) {
+		default:
+			return false
+		case string:
+			continue
+		}
+
+	}
+
+	return true
+}
+
 func (cbc *CreateBindingsCommand) writeBoolValue(writer *bufio.Writer, instanceName string, fieldName string, fieldContents bool, componentProtoName string) {
 
-	writer.WriteString("\t")
-	writer.WriteString(instanceName)
-	writer.WriteString(".")
-	writer.WriteString(fieldName)
-	writer.WriteString(" = ")
+	cbc.writeAssignmentPrefix(writer, instanceName, fieldName)
 	writer.WriteString(strconv.FormatBool(fieldContents))
 	writer.WriteString("\n")
 
@@ -211,13 +263,9 @@ func (cbc *CreateBindingsCommand) writeStringValue(writer *bufio.Writer, instanc
 		}
 	}
 
-	writer.WriteString("\t")
-	writer.WriteString(instanceName)
-	writer.WriteString(".")
-	writer.WriteString(fieldName)
-	writer.WriteString(" = \"")
-	writer.WriteString(fieldContents)
-	writer.WriteString("\"\n")
+	cbc.writeAssignmentPrefix(writer, instanceName, fieldName)
+	writer.WriteString(fmt.Sprintf("%q", fieldContents))
+	writer.WriteString("\n")
 }
 
 func (cbc *CreateBindingsCommand) writeMapValue(writer *bufio.Writer, instanceName string, fieldName string, fieldContents map[string]interface{}) {
@@ -236,6 +284,16 @@ func (cbc *CreateBindingsCommand) writeMapValue(writer *bufio.Writer, instanceNa
 		writer.WriteString(value.(string))
 		writer.WriteString("\"\n")
 	}
+
+}
+
+func (cbc *CreateBindingsCommand) writeAssignmentPrefix(writer *bufio.Writer, instanceName string, fieldName string) {
+
+	writer.WriteString("\t")
+	writer.WriteString(instanceName)
+	writer.WriteString(".")
+	writer.WriteString(fieldName)
+	writer.WriteString(" = ")
 
 }
 
@@ -261,7 +319,7 @@ func (cbc *CreateBindingsCommand) writeComponentWrapper(writer *bufio.Writer, co
 	writer.WriteString(componentProtoName)
 	writer.WriteString(".Component.Name = \"")
 	writer.WriteString(name)
-	writer.WriteString("\"\n\t")
+	writer.WriteString("\"\n")
 
 	return componentProtoName
 }

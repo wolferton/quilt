@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/wolferton/quilt/logging"
 	"net/http"
+	"regexp"
 )
 
 //Implements HttpEndpointProvider
@@ -22,11 +23,14 @@ type WsHandler struct {
 	DisableQueryParsing    bool
 	DeferUnmarshalError    bool
 	BindQueryParams        map[string][]string
+	BindPathParams         []string
 	QueryBinder            *ParamBinder
 	AutoBindQuery          bool
 	validate               bool
 	validator              WsRequestValidator
 	bindQuery              bool
+	bindPathParams         bool
+	pathRegex              *regexp.Regexp
 }
 
 func (wh *WsHandler) ProvideErrorFinder(finder ServiceErrorFinder) {
@@ -52,9 +56,7 @@ func (wh *WsHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if !wh.DisableQueryParsing {
-		wh.processQueryParams(req, wsReq)
-	}
+	wh.processQueryParams(req, wsReq)
 
 	var errors ServiceErrors
 	errors.ErrorFinder = wh.ErrorFinder
@@ -91,7 +93,15 @@ func (wh *WsHandler) unmarshall(req *http.Request, wsReq *WsRequest) error {
 	return nil
 }
 
+func (wh *WsHandler) processPathParams(req *http.Request, wsReq *WsRequest) {
+
+}
+
 func (wh *WsHandler) processQueryParams(req *http.Request, wsReq *WsRequest) {
+
+	if wh.DisableQueryParsing {
+		return
+	}
 
 	values := req.URL.Query()
 	wsReq.QueryParams = NewWsQueryParams(values)
@@ -222,6 +232,18 @@ func (wh *WsHandler) StartComponent() error {
 	}
 
 	wh.bindQuery = wh.AutoBindQuery || (wh.BindQueryParams != nil && len(wh.BindQueryParams) > 0)
+
+	if len(wh.BindPathParams) > 0 {
+
+		r, err := regexp.Compile(wh.PathMatchPattern)
+
+		if err != nil {
+			return err
+		} else {
+			wh.pathRegex = r
+		}
+
+	}
 
 	return nil
 

@@ -9,12 +9,13 @@ import (
 const JsonPathSeparator string = "."
 
 const (
-	JsonUnknown = -1
-	JsonInt     = 0
-	JsonString  = 1
-	JsonArray   = 2
-	JsonMap     = 3
-	JsonBool    = 4
+	JsonUnknown     = -1
+	JsonInt         = 0
+	JsonString      = 1
+	JsonArray       = 2
+	JsonMap         = 3
+	JsonBool        = 4
+	JsonStringArray = 5
 )
 
 type ConfigValue interface{}
@@ -89,6 +90,8 @@ func JsonType(value interface{}) int {
 		return JsonMap
 	case bool:
 		return JsonBool
+	case []interface{}:
+		return JsonArray
 	default:
 		return JsonUnknown
 	}
