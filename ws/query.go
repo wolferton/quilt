@@ -71,6 +71,20 @@ func (qp *WsQueryParams) BoolValue(key string) (bool, error) {
 
 }
 
+func (qp *WsQueryParams) FloatNValue(key string, bits int) (float64, error) {
+
+	v := qp.values[key]
+
+	if v == nil {
+		return 0.0, qp.noVal(key)
+	}
+
+	i, err := strconv.ParseFloat(v[len(v)-1], bits)
+
+	return i, err
+
+}
+
 func (qp *WsQueryParams) IntNValue(key string, bits int) (int64, error) {
 
 	v := qp.values[key]

@@ -21,6 +21,11 @@ func SetInt64(i interface{}, name string, v int64) {
 	t.SetInt(v)
 }
 
+func SetFloat64(i interface{}, name string, v float64) {
+	t := FieldValue(i, name)
+	t.SetFloat(v)
+}
+
 func SetUint64(i interface{}, name string, v uint64) {
 	t := FieldValue(i, name)
 	t.SetUint(v)

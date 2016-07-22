@@ -72,6 +72,11 @@ func (pb *ParamBinder) bindValueToField(paramName string, fieldName string, p *W
 		return pb.setUintNField(paramName, fieldName, p, t, 32, errorFn)
 	case reflect.Uint64:
 		return pb.setUintNField(paramName, fieldName, p, t, 64, errorFn)
+	case reflect.Float32:
+		return pb.setFloatNField(paramName, fieldName, p, t, 32, errorFn)
+	case reflect.Float64:
+		return pb.setFloatNField(paramName, fieldName, p, t, 64, errorFn)
+
 	}
 
 	return nil
@@ -105,10 +110,21 @@ func (pb *ParamBinder) setIntNField(paramName string, fieldName string, qp *WsQu
 	i, err := qp.IntNValue(paramName, bits)
 
 	if err != nil {
-		return errorFn(paramName, fieldName, pb.intTypeName("an int", bits))
+		return errorFn(paramName, fieldName, pb.intTypeName("an integer", bits))
 	}
 
 	rt.SetInt64(t, fieldName, i)
+	return nil
+}
+
+func (pb *ParamBinder) setFloatNField(paramName string, fieldName string, qp *WsQueryParams, t interface{}, bits int, errorFn bindError) *WsFrameworkError {
+	i, err := qp.FloatNValue(paramName, bits)
+
+	if err != nil {
+		return errorFn(paramName, fieldName, pb.intTypeName("a floating-point number", bits))
+	}
+
+	rt.SetFloat64(t, fieldName, i)
 	return nil
 }
 
@@ -116,7 +132,7 @@ func (pb *ParamBinder) setUintNField(paramName string, fieldName string, qp *WsQ
 	i, err := qp.UIntNValue(paramName, bits)
 
 	if err != nil {
-		return errorFn(paramName, fieldName, pb.intTypeName("an unsigned int", bits))
+		return errorFn(paramName, fieldName, pb.intTypeName("an unsigned integer", bits))
 	}
 
 	rt.SetUint64(t, fieldName, i)
