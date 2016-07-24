@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/wolferton/quilt/logging"
 	"os"
 	"reflect"
@@ -173,15 +172,13 @@ func (ca *ConfigAccessor) arrayValue(a reflect.Value) reflect.Value {
 
 	switch t := v[0].(type) {
 	case string:
-		s = reflect.MakeSlice(reflect.TypeOf([]string{}), l, l)
+		s = reflect.MakeSlice(reflect.TypeOf([]string{}), 0, 0)
 	default:
 		ca.FrameworkLogger.LogFatalf("Cannot use an array of %T as a value in a Map.", t)
 		os.Exit(-1)
 	}
 
 	for _, elem := range v {
-
-		fmt.Printf("Adding >%s< %d", elem.(string), l)
 
 		s = reflect.Append(s, reflect.ValueOf(elem))
 

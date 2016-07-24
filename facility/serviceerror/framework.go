@@ -1,7 +1,6 @@
 package serviceerror
 
 import (
-	"fmt"
 	"github.com/wolferton/quilt/logging"
 	"github.com/wolferton/quilt/ws"
 )
@@ -24,15 +23,6 @@ func (feg *FrameworkErrorGenerator) Error(e FrameworkErrorEvent, c ws.ServiceErr
 }
 
 func (feg *FrameworkErrorGenerator) StartComponent() error {
-
-	for k, v := range feg.Messages {
-		fmt.Printf("%s %v%d\n", k, v, len(v))
-
-		for _, x := range v {
-			fmt.Printf(">>%s<<\n", x)
-		}
-
-	}
 
 	return nil
 
