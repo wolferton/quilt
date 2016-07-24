@@ -1,7 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"github.com/wolferton/quilt/logging"
+	"os"
 	"reflect"
 	"strings"
 )
@@ -119,17 +121,73 @@ func (ca *ConfigAccessor) SetField(fieldName string, path string, target interfa
 	targetReflect := reflect.ValueOf(target).Elem()
 	targetField := targetReflect.FieldByName(fieldName)
 
-	switch targetField.Type().Kind() {
+	k := targetField.Type().Kind()
+
+	switch k {
 	case reflect.String:
 		targetField.SetString(ca.StringVal(path))
 	case reflect.Bool:
 		targetField.SetBool(ca.BoolValue(path))
 	case reflect.Int:
 		targetField.SetInt(int64(ca.IntValue(path)))
+	case reflect.Map:
+		ca.populateMapField(targetField, ca.ObjectVal(path))
+
 	default:
-		ca.FrameworkLogger.LogErrorf("Unable to use value at path %s as target field %s is not a suppported type", path, fieldName)
+		ca.FrameworkLogger.LogErrorf("Unable to use value at path %s as target field %s is not a suppported type (%s)", path, fieldName, k)
 	}
 
+}
+
+func (ca *ConfigAccessor) populateMapField(targetField reflect.Value, contents map[string]interface{}) {
+	m := reflect.MakeMap(targetField.Type())
+	targetField.Set(m)
+
+	for k, v := range contents {
+
+		kVal := reflect.ValueOf(k)
+		vVal := reflect.ValueOf(v)
+
+		if vVal.Kind() == reflect.Slice {
+			vVal = ca.arrayValue(vVal)
+		}
+
+		m.SetMapIndex(kVal, vVal)
+
+	}
+
+}
+
+//TODO support arrays other than string arrays
+func (ca *ConfigAccessor) arrayValue(a reflect.Value) reflect.Value {
+
+	v := a.Interface().([]interface{})
+	l := len(v)
+
+	if l == 0 {
+		ca.FrameworkLogger.LogFatalf("Cannot use an empty array as a value in a Map.")
+		os.Exit(-1)
+	}
+
+	var s reflect.Value
+
+	switch t := v[0].(type) {
+	case string:
+		s = reflect.MakeSlice(reflect.TypeOf([]string{}), l, l)
+	default:
+		ca.FrameworkLogger.LogFatalf("Cannot use an array of %T as a value in a Map.", t)
+		os.Exit(-1)
+	}
+
+	for _, elem := range v {
+
+		fmt.Printf("Adding >%s< %d", elem.(string), l)
+
+		s = reflect.Append(s, reflect.ValueOf(elem))
+
+	}
+
+	return s
 }
 
 func (ca *ConfigAccessor) Populate(path string, target interface{}) {

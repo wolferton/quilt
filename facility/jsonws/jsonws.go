@@ -2,6 +2,7 @@ package jsonws
 
 import (
 	"github.com/wolferton/quilt/config"
+	"github.com/wolferton/quilt/facility/serviceerror"
 	"github.com/wolferton/quilt/ioc"
 	"github.com/wolferton/quilt/logging"
 	"github.com/wolferton/quilt/ws"
@@ -14,6 +15,7 @@ const jsonAbnormalResponseWriterComponentName = ioc.FrameworkPrefix + "JsonAbnor
 const jsonHandlerDecoratorComponentName = ioc.FrameworkPrefix + "JsonHandlerDecorator"
 const wsHttpStatusDeterminerComponentName = ioc.FrameworkPrefix + "HttpStatusDeterminer"
 const wsQueryBinderComponentName = ioc.FrameworkPrefix + "QueryBinder"
+const wsFrameworkErrorGenerator = ioc.FrameworkPrefix + "FrameworkErrorGenerator"
 
 type JsonWsFacilityBuilder struct {
 }
@@ -35,8 +37,12 @@ func (fb *JsonWsFacilityBuilder) BuildAndRegister(lm *logging.ComponentLoggerMan
 	jsonUnmarshaller := new(json.DefaultJsonUnmarshaller)
 	cn.WrapAndAddProto(jsonUnmarshallerComponentName, jsonUnmarshaller)
 
+	frameworkErrors := new(serviceerror.FrameworkErrorGenerator)
+	ca.Populate("FrameworkServiceErrors", frameworkErrors)
+	cn.WrapAndAddProto(wsFrameworkErrorGenerator, frameworkErrors)
+
 	decoratorLogger := lm.CreateLogger(jsonHandlerDecoratorComponentName)
-	decorator := JsonWsHandlerDecorator{decoratorLogger, responseWriter, abnormalResponseWriter, statusDeterminer, jsonUnmarshaller, queryBinder}
+	decorator := JsonWsHandlerDecorator{decoratorLogger, responseWriter, abnormalResponseWriter, statusDeterminer, jsonUnmarshaller, queryBinder, frameworkErrors}
 	cn.WrapAndAddProto(jsonHandlerDecoratorComponentName, &decorator)
 }
 
@@ -55,6 +61,7 @@ type JsonWsHandlerDecorator struct {
 	StatusCodeDeterminer ws.HttpStatusCodeDeterminer
 	Unmarshaller         ws.WsUnmarshaller
 	QueryBinder          *ws.ParamBinder
+	FrameworkErrors      *serviceerror.FrameworkErrorGenerator
 }
 
 func (jwhd *JsonWsHandlerDecorator) OfInterest(component *ioc.Component) bool {

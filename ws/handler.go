@@ -22,8 +22,8 @@ type WsHandler struct {
 	RevealPanicDetails     bool
 	DisableQueryParsing    bool
 	DisablePathParsing     bool
-	DeferUnmarshalError    bool
-	BindQueryParams        map[string][]string
+	DeferFrameworkErrors   bool
+	BindQueryParams        map[string]string
 	BindPathParams         []string
 	ParamBinder            *ParamBinder
 	AutoBindQuery          bool
@@ -152,7 +152,7 @@ func (wh *WsHandler) RegexPattern() string {
 func (wh *WsHandler) handleUnmarshallError(err error, w http.ResponseWriter, wsReq *WsRequest) {
 	wh.QuiltApplicationLogger.LogWarnf("Error unmarshalling request body %s", err)
 
-	if wh.DeferUnmarshalError {
+	if wh.DeferFrameworkErrors {
 		//Add a framework error for a validator to pick up later
 		f := NewUnmarshallWsFrameworkError(err.Error())
 		wsReq.AddFrameworkError(f)
